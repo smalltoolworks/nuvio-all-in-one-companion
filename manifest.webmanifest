@@ -1,0 +1,23 @@
+{
+  "name": "Nuvio All-in-One Companion",
+  "short_name": "Nuvio Companion",
+  "description": "Manage Nuvio add-ons, profiles, locks, collections, home layout and versioned backups across Nuvio Cloud or a compatible self-hosted backend.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
+  "categories": ["utilities", "entertainment"],
+  "shortcuts": [
+    { "name": "Marketplace", "short_name": "Marketplace", "url": "./#market" },
+    { "name": "Manage Profiles", "short_name": "Profiles", "url": "./#profilemgr" },
+    { "name": "Toolkit & Backups", "short_name": "Toolkit", "url": "./#toolkit" }
+  ],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "favicon.ico", "sizes": "48x48 32x32 16x16", "type": "image/x-icon" }
+  ]
+}
