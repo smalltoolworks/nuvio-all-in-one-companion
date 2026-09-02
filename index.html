@@ -8360,12 +8360,45 @@ function collectionLintFindings(){
   });
   return findings;
 }
+/* TMDB and Trakt collection sources are resolved by Nuvio itself, using integrations
+   the companion cannot see or verify. A collection can be structurally perfect — valid
+   tmdbSourceType, valid traktListId, linter clean — and still render "nothing to show"
+   when the API key or account link is missing on the Nuvio side. The linter cannot
+   detect that, so it at least states the dependency. Informational only: this never
+   reports a problem, and never affects whether the linter passes. */
+function collectionIntegrationNotes(){
+  const notes = [];
+  (collectionsState.items || []).forEach((c, ci) => {
+    const counts = {};
+    (Array.isArray(c && c.folders) ? c.folders : []).forEach(f => {
+      const sources = Array.isArray(f.sources) ? f.sources : (Array.isArray(f.catalogSources) ? f.catalogSources : []);
+      sources.forEach(s => {
+        const provider = String((s && s.provider) || 'addon').toLowerCase();
+        counts[provider] = (counts[provider] || 0) + 1;
+      });
+    });
+    if (counts.tmdb || counts.trakt) notes.push({ title: (c && (c.title || c.id)) || `collection #${ci + 1}`, counts });
+  });
+  return notes;
+}
+function collectionIntegrationHtml(){
+  const notes = collectionIntegrationNotes();
+  if (!notes.length) return '';
+  const needs = [];
+  if (notes.some(n => n.counts.tmdb)) needs.push('a <b>TMDB API key</b>');
+  if (notes.some(n => n.counts.trakt)) needs.push('a <b>linked Trakt account</b>');
+  const rows = notes.map(n => `<tr><td>${esc(n.title)}</td><td>${n.counts.tmdb || 0}</td><td>${n.counts.trakt || 0}</td><td>${n.counts.addon || 0}</td></tr>`).join('');
+  return `<div class="settings-block" style="margin-top:12px;">` +
+    `<div class="settings-block-head"><h3>Integrations these collections rely on</h3><span class="platform-chip">configured in Nuvio</span></div>` +
+    `<p class="hint">TMDB and Trakt sources are resolved by Nuvio, not by an add-on, so this companion cannot verify them. If the integration is missing the folder shows nothing even though the collection is valid — check that ${needs.join(' and ')} ${needs.length > 1 ? 'are' : 'is'} set up in Nuvio's own settings.</p>` +
+    `<table class="tool-table"><thead><tr><th>Collection</th><th>TMDB</th><th>Trakt</th><th>Add-on</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
 function runCollectionLinter(toToolkit = false){
   const findings = collectionLintFindings();
   const html = findings.length
     ? `<div class="settings-block"><div class="settings-block-head"><h3>Collection Linter</h3><span class="platform-chip">${findings.length} finding(s)</span></div><table class="tool-table"><thead><tr><th>Level</th><th>Collection</th><th>Finding</th></tr></thead><tbody>${findings.map(([level, col, msg]) => `<tr><td class="${level === 'bad' ? 'tool-bad' : 'tool-warn'}">${esc(level)}</td><td>${esc(col)}</td><td>${esc(msg)}</td></tr>`).join('')}</tbody></table></div>`
     : '<div class="alert alert-ok">Collection linter passed. No obvious structural issues found.</div>';
-  toolkitWrite(html, toToolkit ? 'toolkitOutput' : 'collectionsLint');
+  toolkitWrite(html + collectionIntegrationHtml(), toToolkit ? 'toolkitOutput' : 'collectionsLint');
 }
 function libraryInsightData(){
   const items = libraryState.items || [];

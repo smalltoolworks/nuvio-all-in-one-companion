@@ -1,6 +1,6 @@
 /* Nuvio Companion service worker — offline app shell + cached community packs.
    Never touches cross-origin requests (Nuvio cloud API, addon manifests, images). */
-const CACHE = 'nuvio-companion-v13';
+const CACHE = 'nuvio-companion-v14';
 const DATA_CACHE = 'nuvio-companion-data-v1'; // written by the page (community packs); must survive shell upgrades
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './favicon.ico'];
 
