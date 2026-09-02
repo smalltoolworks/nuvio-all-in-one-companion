@@ -2111,6 +2111,8 @@ function syncNavGroups(name){
   });
 }
 const PANE_IDS = { home:'homePane', addons:'addonsPane', stremioaddons:'stremioAddonsPane', market:'marketPane', discover:'discoverPane', collections:'collectionsPane', community:'communityPane', plugins:'pluginsPane', catalogues:'cataloguesPane', kidsprofile:'kidsProfilePane', profilemgr:'profileMgrPane', profilecustom:'profileCustomPane', profileclone:'profileClonePane', library:'libraryPane', activity:'activityPane', toolkit:'toolkitPane', migrate:'migratePane', accounts:'accountsPane', settings:'settingsPane' };
+// panes that work without a Nuvio session (Stremio-only mode)
+const SIGNED_OUT_PANES = new Set(['migrate', 'market', 'stremioaddons']);
 function paneFromHash(){ const h = location.hash.replace(/^#\/?/, ''); return PANE_IDS[h] ? h : null; }
 function switchPane(name, opts = {}){
   activePane = name;
@@ -2126,12 +2128,14 @@ function switchPane(name, opts = {}){
   });
   syncNavGroups(name);
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-  if (!session && name !== 'migrate' && name !== 'market' && name !== 'stremioaddons') { $('signinPane').classList.add('active'); return; }
+  // a pane switch always starts at the top; focus() alone does not scroll reliably
+  window.scrollTo(0, 0);
+  if (!session && !SIGNED_OUT_PANES.has(name)) { $('signinPane').classList.add('active'); return; }
   const id = PANE_IDS[name];
   $(id).classList.add('active');
   if (opts.focusHeading !== false) {
     const h = $(id).querySelector('.pane-title');
-    if (h) { h.setAttribute('tabindex', '-1'); h.focus(); }
+    if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
   }
   if (name === 'home') renderHomeDashboard();
   if (name === 'market' && !marketItems.length) loadMarket();
@@ -8788,6 +8792,13 @@ window.addEventListener('beforeunload', e => { if (R.addon.dirty || R.plugin.dir
     $('loginMsg').innerHTML = '<div class="alert alert-ok">Restoring your session…</div>';
     if (await refreshSession()) { $('loginMsg').innerHTML = ''; await afterSignIn(); }
     else $('loginMsg').innerHTML = '<div class="alert alert-warn">Saved session expired — sign in again.</div>';
+  }
+  // Deep links / PWA shortcuts are cold loads. afterSignIn() applies the hash for
+  // signed-in users; without a session nothing did, so #market, #stremioaddons and
+  // #migrate fell through to the sign-in pane.
+  if (!session) {
+    const deepLink = paneFromHash();
+    if (deepLink && SIGNED_OUT_PANES.has(deepLink)) switchPane(deepLink);
   }
 })();
 </script>
