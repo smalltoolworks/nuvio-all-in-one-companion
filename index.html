@@ -992,6 +992,7 @@ footer a { color: var(--muted); }
         <button class="btn btn-xs" onclick="loadCollections(true)">↻ Reload</button>
         <button class="btn btn-xs" onclick="addCollectionPrompt()">＋ Add collection</button>
         <button class="btn btn-xs btn-amber" onclick="createPatchbayHomeFromSelectedCatalogues()">▦ Build selected home</button>
+        <button class="btn btn-xs btn-amber" onclick="runAutoBind()">⚯ Auto-bind catalogues</button>
         <button class="btn btn-xs" onclick="runCollectionLinter()">Lint</button>
         <button class="btn btn-xs btn-ghost" onclick="restoreCollectionsBackup()">Restore backup</button>
         <button class="btn btn-xs btn-green" onclick="pushCollectionsOnly()">⇪ Push collections</button>
@@ -5600,6 +5601,114 @@ function catalogueBuilderRows(){
     }
   }
   return rows;
+}
+
+/* ── Auto-bind: attach catalogues to folders that have none ─────────────────────
+   Community packs — notably the "Easy Install" art packs — ship folders with an
+   empty catalogSources array, so Nuvio renders them as "nothing to show". Catalogue
+   ids are configuration-specific (mdblist.*, flixpatrol.*, tmdb.discover.*), so
+   there is nothing to hardcode: we match each folder's title against the catalogues
+   the user's own enabled add-ons actually expose. Matches are staged like any other
+   edit — nothing reaches Nuvio until Push collections. */
+const AUTOBIND_TYPE_WORDS = { movie: ['movie','movies','film','films'], series: ['series','serie','tv','show','shows'] };
+const AUTOBIND_NOISE = new Set(['the','a','an','of','on','in','and']);
+let autoBindState = { proposals: [] };
+
+function autoBindTokens(text){
+  return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+}
+function autoBindTypeOf(text){
+  const toks = new Set(autoBindTokens(text));
+  const isMovie = AUTOBIND_TYPE_WORDS.movie.some(w => toks.has(w));
+  const isSeries = AUTOBIND_TYPE_WORDS.series.some(w => toks.has(w));
+  if (isMovie && !isSeries) return 'movie';
+  if (isSeries && !isMovie) return 'series';
+  return null;
+}
+function autoBindCore(text){
+  const typeWords = new Set([...AUTOBIND_TYPE_WORDS.movie, ...AUTOBIND_TYPE_WORDS.series]);
+  return autoBindTokens(text).filter(t => !typeWords.has(t) && !AUTOBIND_NOISE.has(t));
+}
+// Best candidate for one folder title, or null when nothing is confident enough.
+function autoBindBestMatch(folderTitle, rows){
+  const wantType = autoBindTypeOf(folderTitle);
+  const fCore = autoBindCore(folderTitle);
+  if (!fCore.length) return null;
+  let best = null;
+  for (const row of rows) {
+    const rowType = String(row.type || '').toLowerCase();
+    // a catalogue whose type contradicts the folder title is never a match
+    if (wantType && rowType && rowType !== wantType && rowType !== 'all') continue;
+    const cCore = autoBindCore(row.title);
+    const cSet = new Set(cCore);
+    if (!fCore.every(t => cSet.has(t))) continue;
+    const typed = !!wantType && rowType === wantType;
+    const exact = cCore.length === fCore.length;
+    if (!typed && !exact) continue; // too speculative to apply automatically
+    const confidence = exact && typed ? 'exact' : 'likely';
+    const cand = { row, confidence, extra: cCore.length - fCore.length };
+    const rank = c => (c.confidence === 'exact' ? 0 : 1);
+    if (!best || rank(cand) < rank(best) || (rank(cand) === rank(best) && cand.extra < best.extra)) best = cand;
+  }
+  return best;
+}
+function autoBindScan(){
+  const rows = catalogueBuilderRows();
+  const proposals = [], unmatched = [];
+  let alreadyBound = 0;
+  (collectionsState.items || []).forEach((col, ci) => {
+    (Array.isArray(col && col.folders) ? col.folders : []).forEach((f, fi) => {
+      const has = Array.isArray(f.sources) ? f.sources : (Array.isArray(f.catalogSources) ? f.catalogSources : []);
+      if (has.length) { alreadyBound++; return; }
+      const title = f.title || f.id || `folder #${fi + 1}`;
+      const match = autoBindBestMatch(title, rows);
+      if (match) proposals.push({ ci, fi, collection: col.title || col.id || `collection #${ci + 1}`, folder: title, match });
+      else unmatched.push({ collection: col.title || col.id || `collection #${ci + 1}`, folder: title });
+    });
+  });
+  return { rows, proposals, unmatched, alreadyBound };
+}
+function runAutoBind(){
+  const { rows, proposals, unmatched, alreadyBound } = autoBindScan();
+  autoBindState.proposals = proposals;
+  if (!rows.length) {
+    toolkitWrite('<div class="alert alert-warn">No catalogues available to bind. Load your add-on manifests on the My Add-ons pane first (↻ Reload), then try again.</div>', 'collectionsLint');
+    return;
+  }
+  const empty = proposals.length + unmatched.length;
+  if (!empty) {
+    toolkitWrite(`<div class="alert alert-ok">Every folder already has a catalogue source (${alreadyBound} checked). Nothing to bind.</div>`, 'collectionsLint');
+    return;
+  }
+  const rowHtml = proposals.map(p => `<tr><td class="${p.match.confidence === 'exact' ? 'tool-good' : 'tool-warn'}">${esc(p.match.confidence)}</td><td>${esc(p.collection)}</td><td>${esc(p.folder)}</td><td>${esc(p.match.row.title)}</td><td>${esc(p.match.row.addonName)} · ${esc(p.match.row.type)} · ${esc(p.match.row.catalogId)}</td></tr>`).join('');
+  const unHtml = unmatched.map(u => `<tr><td class="tool-warn">none</td><td>${esc(u.collection)}</td><td>${esc(u.folder)}</td><td colspan="2">No confident catalogue match — bind this one by hand</td></tr>`).join('');
+  toolkitWrite(
+    `<div class="settings-block"><div class="settings-block-head"><h3>Auto-bind catalogues</h3>` +
+    `<span class="platform-chip">${proposals.length} of ${empty} empty folder(s) matched</span></div>` +
+    `<p class="hint">Matched against ${rows.length} catalogue(s) from your enabled add-ons. Applying only stages the change — review it, then Push collections.</p>` +
+    `<table class="tool-table"><thead><tr><th>Match</th><th>Collection</th><th>Folder</th><th>Catalogue</th><th>Source</th></tr></thead><tbody>${rowHtml}${unHtml}</tbody></table>` +
+    (proposals.length ? `<div class="toolbar" style="margin-top:12px;"><button class="btn btn-xs btn-green" onclick="applyAutoBind()">Apply ${proposals.length} binding(s)</button><span class="hint" style="margin:0;">Nothing is sent to Nuvio until you push.</span></div>` : '') +
+    `</div>`, 'collectionsLint');
+}
+function applyAutoBind(){
+  const proposals = autoBindState.proposals || [];
+  if (!proposals.length) { toast('Nothing to apply — run Auto-bind first'); return; }
+  let applied = 0;
+  for (const p of proposals) {
+    const col = (collectionsState.items || [])[p.ci];
+    const folder = col && Array.isArray(col.folders) ? col.folders[p.fi] : null;
+    if (!folder) continue;                                  // collection edited since the scan
+    const has = Array.isArray(folder.sources) ? folder.sources : (Array.isArray(folder.catalogSources) ? folder.catalogSources : []);
+    if (has.length) continue;                               // no longer empty; leave it alone
+    const src = { addonId: p.match.row.addonId, type: p.match.row.type, catalogId: p.match.row.catalogId };
+    if (Array.isArray(folder.sources)) folder.sources = [{ provider: 'addon', ...src }];
+    else folder.catalogSources = [src];
+    applied++;
+  }
+  autoBindState.proposals = [];
+  renderCollections(); checkCollectionsDirty();
+  toast(applied ? `Bound ${applied} folder(s) — review, then Push collections` : 'No folders needed binding');
+  runAutoBind();
 }
 
 function ensureCollectionBuilderDefaults(rows){
