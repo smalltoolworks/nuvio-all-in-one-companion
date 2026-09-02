@@ -1,7 +1,7 @@
 {
   "name": "Nuvio All-in-One Companion",
   "short_name": "Nuvio Companion",
-  "description": "Manage Nuvio add-ons, profiles, locks, collections, home layout and versioned backups across Nuvio Cloud or a compatible self-hosted backend.",
+  "description": "Manage, reorder and safely sync add-ons, libraries and watch state across Nuvio and Stremio, with Nuvio profiles, locks, collections, home layouts and cloud backups.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -12,6 +12,8 @@
   "categories": ["utilities", "entertainment"],
   "shortcuts": [
     { "name": "Marketplace", "short_name": "Marketplace", "url": "./#market" },
+    { "name": "Stremio Add-ons", "short_name": "Stremio Add-ons", "url": "./#stremioaddons" },
+    { "name": "Stremio Sync", "short_name": "Stremio Sync", "url": "./#migrate" },
     { "name": "Manage Profiles", "short_name": "Profiles", "url": "./#profilemgr" },
     { "name": "Toolkit & Backups", "short_name": "Toolkit", "url": "./#toolkit" }
   ],

@@ -552,7 +552,7 @@ footer a { color: var(--muted); }
 <header>
   <div class="header-left">
     <span class="wordmark"><span class="wm-full">Nuvio All-in-One Companion</span><span class="wm-short">Nuvio Companion</span> <span class="cog">⚙</span></span>
-    <span class="version-badge">v6.0</span>
+    <span class="version-badge">v6.2</span>
     <span class="tagline">all-in-one companion · official cloud api</span>
   </div>
   <div class="header-right">
@@ -572,6 +572,7 @@ footer a { color: var(--muted); }
       <button class="nav-ghead" onclick="toggleNavGroup('addons')"><span class="ico">▤</span> Add-ons <span class="chev">▾</span></button>
       <div class="nav-gkids">
         <button class="nav-btn" data-pane="addons" onclick="switchPane('addons')"><span class="ico">▤</span> My Add-ons <span class="dot hidden" id="dotAddons"></span></button>
+        <button class="nav-btn" data-pane="stremioaddons" onclick="switchPane('stremioaddons')"><span class="ico">S</span> Stremio Add-ons <span class="dot hidden" id="dotStremioAddons"></span></button>
         <button class="nav-btn" data-pane="market" onclick="switchPane('market')"><span class="ico">⊕</span> Marketplace</button>
         <button class="nav-btn" data-pane="plugins" onclick="switchPane('plugins')"><span class="ico">⌗</span> Plugins <span class="dot hidden" id="dotPlugins"></span></button>
         <button class="nav-btn" data-pane="catalogues" onclick="switchPane('catalogues')"><span class="ico">≡</span> Catalogues</button>
@@ -606,7 +607,7 @@ footer a { color: var(--muted); }
       </div>
     </div>
 
-    <button class="nav-btn" data-pane="migrate" onclick="switchPane('migrate')"><span class="ico">⇄</span> Migrate from Stremio</button>
+    <button class="nav-btn" data-pane="migrate" onclick="switchPane('migrate')"><span class="ico">⇄</span> Stremio Sync</button>
     <button class="nav-btn" data-pane="toolkit" onclick="switchPane('toolkit')"><span class="ico">◎</span> Toolkit</button>
     <button class="nav-btn" data-pane="settings" onclick="switchPane('settings')"><span class="ico">⚙</span> Settings</button>
   </nav>
@@ -631,6 +632,12 @@ footer a { color: var(--muted); }
         </div>
         <div id="loginMsg"></div>
         <p class="hint">Credentials go straight to the selected Nuvio-compatible backend (<a href="https://nuvio.tv/docs" target="_blank" rel="noopener" style="color:var(--muted);">api docs</a>) and nowhere else. "Stay signed in" stores only the refresh token on this device.</p>
+        <div style="display:flex;align-items:center;gap:10px;margin:16px 0 12px;color:var(--muted);font-family:var(--mono);font-size:10px;"><span style="height:1px;background:var(--border);flex:1;"></span>OR USE STREMIO<span style="height:1px;background:var(--border);flex:1;"></span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-xs" onclick="switchPane('migrate')">Connect Stremio</button>
+          <button class="btn btn-xs btn-ghost" onclick="switchPane('market')">Browse Stremio Marketplace</button>
+        </div>
+        <p class="hint">Stremio-only mode can connect your account, manage and reorder installed add-ons, inspect its library, and install marketplace add-ons. Sign in to Nuvio only when you want Nuvio management or cross-provider sync.</p>
         <details style="margin-top:12px;">
           <summary style="font-family:var(--mono);font-size:11px;color:var(--muted);cursor:pointer;">Advanced · self-hosted backend</summary>
           <div style="padding-top:12px;">
@@ -656,6 +663,10 @@ footer a { color: var(--muted); }
           <button class="home-tile" data-tile="addons" onclick="switchPane('addons')">
             <div class="tile-ico">▤</div><div class="tile-title">My Add-ons</div>
             <div class="tile-desc">Manage the active profile's addon list.</div><div class="tile-foot">Open</div>
+          </button>
+          <button class="home-tile" data-tile="stremioaddons" onclick="switchPane('stremioaddons')">
+            <div class="tile-ico">S</div><div class="tile-title">Stremio Add-ons</div>
+            <div class="tile-desc">Add, remove, reorder, configure, and safely save your Stremio add-ons.</div><div class="tile-foot">Manage</div>
           </button>
           <button class="home-tile" data-tile="market" onclick="switchPane('market')">
             <div class="tile-ico">⊕</div><div class="tile-title">Marketplace</div>
@@ -702,8 +713,8 @@ footer a { color: var(--muted); }
             <div class="tile-desc">Continue watching and watch history.</div><div class="tile-foot">Open</div>
           </button>
           <button class="home-tile" data-tile="migrate" onclick="switchPane('migrate')">
-            <div class="tile-ico">&#8646;</div><div class="tile-title">Migrate from Stremio</div>
-            <div class="tile-desc">Bring addons, library and watch progress from Stremio.</div><div class="tile-foot">Start</div>
+            <div class="tile-ico">&#8646;</div><div class="tile-title">Stremio Sync</div>
+            <div class="tile-desc">Connect Stremio, compare both accounts, and merge add-ons and library data.</div><div class="tile-foot">Open</div>
           </button>
         </div>
       </div>
@@ -780,10 +791,43 @@ footer a { color: var(--muted); }
       <div class="rack" id="addonRack"></div>
     </div>
 
+    <!-- ── STREMIO ADDONS ─────────────────────── -->
+    <div id="stremioAddonsPane" class="pane">
+      <h2 class="pane-title">Stremio Add-ons</h2>
+      <div class="pane-sub">Manage the installed add-on collection in your connected Stremio account. Changes stay staged until you review and save them.</div>
+      <div id="stremioAddonStatus"></div>
+      <div class="toolbar">
+        <span class="list-count" id="stremioAddonCount"></span>
+        <div class="spacer"></div>
+        <button class="btn btn-xs" onclick="addStremioAddonPrompt()">＋ Add add-on</button>
+        <button class="btn btn-xs" onclick="loadStremioAddonManager(true)">↻ Reload</button>
+        <button class="btn btn-xs btn-ghost" onclick="toggleStremioAddonSelect()">☑ Select</button>
+        <button class="btn btn-xs btn-ghost" onclick="restoreStremioAddonBackup()">Restore backup</button>
+      </div>
+      <div class="toolbar rack-filter">
+        <input class="rack-search" id="stremioAddonSearch" placeholder="Filter by name, URL, ID, or resource…" oninput="setStremioAddonFilter(this.value)" aria-label="Filter Stremio add-ons" />
+      </div>
+      <div class="toolbar bulk-bar hidden" id="stremioAddonBulkBar">
+        <span class="list-count" id="stremioAddonBulkCount">0 selected</span>
+        <div class="spacer"></div>
+        <button class="btn btn-xs btn-red-ghost" onclick="bulkRemoveStremioAddons()">Remove selected</button>
+      </div>
+      <div id="stremioAddonList" style="display:flex;flex-direction:column;gap:9px;"></div>
+      <div class="settings-block" id="stremioAddonSaveBlock" style="margin-top:16px;">
+        <div class="settings-block-head"><h3>Pending Stremio changes</h3><span class="platform-chip" id="stremioAddonDirtyChip">saved</span></div>
+        <div style="padding:0 16px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="hint" id="stremioAddonDiffSummary" style="margin:0;flex:1;">No staged changes.</span>
+          <button class="btn btn-xs btn-ghost" onclick="previewStremioAddonChanges()">Preview</button>
+          <button class="btn btn-xs btn-ghost" onclick="discardStremioAddonChanges()">Discard</button>
+          <button class="btn btn-green" id="saveStremioAddonsBtn" onclick="saveStremioAddonChanges()">Save to Stremio</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── MARKETPLACE ────────────────────────── -->
     <div id="marketPane" class="pane">
       <h2 class="pane-title">Marketplace</h2>
-      <div class="pane-sub">Discover Stremio addons and install them straight into the active Nuvio profile.</div>
+      <div class="pane-sub">Discover Stremio add-ons and install them into Nuvio, Stremio, or both.</div>
       <div class="market-controls">
         <div class="fg" style="margin:0;"><label>Search</label><input id="marketSearch" placeholder="Torrentio, anime, subtitles…" oninput="renderMarket()" /></div>
         <div class="fg" style="margin:0;"><label>Type</label>
@@ -808,6 +852,13 @@ footer a { color: var(--muted); }
             <option value="curated">Curated picks</option>
           </select>
         </div>
+        <div class="fg" style="margin:0;"><label>Install to</label>
+          <select id="marketInstallTarget" onchange="setMarketInstallTarget(this.value)">
+            <option value="nuvio">Nuvio</option>
+            <option value="stremio">Stremio</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
         <button class="btn btn-xs" onclick="loadMarket(true)">↻ Load live</button>
       </div>
       <div id="marketStatus"></div>
@@ -818,8 +869,8 @@ footer a { color: var(--muted); }
         <summary style="font-family:var(--mono); font-size:12px; color:var(--muted); cursor:pointer;">＋ Install by manifest URL (any addon)</summary>
         <div style="padding-top:14px;">
           <div class="fg"><label>Manifest URL</label><input id="manualUrl" placeholder="https://example.com/manifest.json" onkeydown="if(event.key==='Enter')installManualUrl()" /></div>
-          <button class="btn btn-amber btn-xs" onclick="installManualUrl()">Stage in addon rack</button>
-          <p class="hint">Adds the addon to the rack as a pending change. Switch to Addons and push to save it to Nuvio.</p>
+          <button class="btn btn-amber btn-xs" onclick="installManualUrl()">Install using selected target</button>
+          <p class="hint">Uses the Marketplace “Install to” target above. Nuvio installs are staged for review; Stremio installs are merged into its current add-on collection.</p>
         </div>
       </details>
     </div>
@@ -1236,12 +1287,12 @@ footer a { color: var(--muted); }
       <div id="toolkitOutput" class="tool-output"></div>
     </div>
 
-    <!-- ── MIGRATE FROM STREMIO ───────────────── -->
+    <!-- ── STREMIO PROVIDER SYNC ────────────────── -->
     <div id="migratePane" class="pane">
-      <h2 class="pane-title">Migrate from Stremio</h2>
-      <div class="pane-sub">Bring your Stremio addons, library and watch progress into the active Nuvio profile. Nothing in Stremio is changed.</div>
+      <h2 class="pane-title">Stremio Sync</h2>
+      <div class="pane-sub">Connect Stremio as a second provider, compare it with the active Nuvio profile, and safely merge in either direction.</div>
       <div class="alert alert-warn" style="margin-bottom:16px;">
-        Your Stremio credentials go straight to Stremio's API and nowhere else. Migration stages addons into your add-on rack and pushes library, progress and history (merge) straight to the active profile.
+        Your Stremio credentials go straight to Stremio's API. Add-on writes replace Stremio's complete collection internally, so this companion always re-pulls first, preserves official/protected add-ons, saves a local backup, and previews the change.
       </div>
       <div id="migrateContent"></div>
     </div>
@@ -1341,7 +1392,7 @@ footer a { color: var(--muted); }
   </div>
 </div>
 
-<footer>nuvio companion v6.0 · cloud backup · passkeys · profile locks · self-hosted ready · <a href="https://nuvio.tv/docs" target="_blank" rel="noopener">api docs</a></footer>
+<footer>nuvio companion v6.2 · Nuvio + Stremio add-on management · cloud backup · passkeys · profile locks · self-hosted ready · <a href="https://nuvio.tv/docs" target="_blank" rel="noopener">api docs</a></footer>
 
 <!-- community packs lazy-loaded from community-packs.json (see loadCommunityPacks) -->
 
@@ -1355,7 +1406,7 @@ window.KIDZONE_CATS=[{"id":"kz-because-movies","name":"Because You Watched","emo
  * ════════════════════════════════════════════════════════════════════ */
 const DEFAULT_API_BASE = 'https://api.nuvio.tv';
 const DEFAULT_API_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI';
-const CLIENT_INFO = 'NuvioCompanion/6.0';
+const CLIENT_INFO = 'NuvioCompanion/6.2';
 const MAX_PROFILES = 6;
 function earlyBackendConfig(){
   try {
@@ -1398,7 +1449,7 @@ function clearStoredBackups(){
   }
 }
 async function clearAllLocalData(){
-  if (!await confirmDialog('Clear all local Nuvio Companion data on this device?\n\nThis removes saved sign-in, backups, cached marketplace data, and local fallback storage. It does not change anything in Nuvio.', { title: 'Clear local data', okLabel: 'Clear', danger: true })) return;
+  if (!await confirmDialog('Clear all local Nuvio Companion data on this device?\n\nThis removes saved sign-in, Stremio connection, backups, cached marketplace data, and local fallback storage. It does not change either account.', { title: 'Clear local data', okLabel: 'Clear', danger: true })) return;
   try {
     for (let i = localStorage.length - 1; i >= 0; i -= 1) {
       const k = localStorage.key(i);
@@ -1411,6 +1462,8 @@ async function clearAllLocalData(){
   try { if ('caches' in window) await caches.delete('nuvio-companion-data-v1'); } catch {}
   API_BASE = DEFAULT_API_BASE;
   API_KEY = DEFAULT_API_KEY;
+  migrateState = { authKey: null, stremioUser: null, persist: false, loading: false, fileMode: false, raw: { addons: [], library: [] }, data: null, error: null, done: { addons: 0, library: 0, progress: 0, history: 0 } };
+  resetStremioAddonManagerState();
   originClientId = createOriginClientId();
   store.set('pb_origin_client_id', originClientId);
   renderBackendFields();
@@ -1472,9 +1525,18 @@ let libraryState = { items: [], snapshot: null, dirty: false, loading: false, fi
 // watch activity (merge resources — read + merge-push, used by Stremio migration)
 let activityState = { progress: [], history: [], loading: false, filter: '' };
 const activityCache = new Map();
-// Stremio migration
+// Stremio provider sync
 const STREMIO_API = 'https://api.strem.io/api';
-let migrateState = { authKey: null, stremioUser: null, loading: false, data: null, error: null, done: { addons: 0, library: 0, progress: 0, history: 0 } };
+const STREMIO_CONNECTION_KEY = 'pb_stremio_connection_v1';
+let migrateState = {
+  authKey: null, stremioUser: null, persist: false, loading: false, fileMode: false,
+  raw: { addons: [], library: [] }, data: null, error: null,
+  done: { addons: 0, library: 0, progress: 0, history: 0 }
+};
+let stremioAddonManager = {
+  items: [], snapshotItems: [], remoteFingerprint: null,
+  dirty: false, loading: false, filter: '', selecting: false, selected: new Set()
+};
 // multi-account (each account keeps a refresh token; the active one backs the global session)
 let accounts = [];        // [{ id, email, refresh_token }]
 let activeAccountId = null;
@@ -2029,6 +2091,7 @@ async function onProfileChange(){
   if (activePane === 'activity') loadActivity(true);
   if (activePane === 'profilemgr') renderProfileMgr();
   if (activePane === 'settings') loadSettingsBlobs();
+  if (activePane === 'migrate') renderMigrate();
 }
 function effectiveProfile(kind){
   return effectiveProfileFor(currentProfile, kind);
@@ -2047,7 +2110,7 @@ function syncNavGroups(name){
     if (holdsActive) g.classList.add('open');
   });
 }
-const PANE_IDS = { home:'homePane', addons:'addonsPane', market:'marketPane', discover:'discoverPane', collections:'collectionsPane', community:'communityPane', plugins:'pluginsPane', catalogues:'cataloguesPane', kidsprofile:'kidsProfilePane', profilemgr:'profileMgrPane', profilecustom:'profileCustomPane', profileclone:'profileClonePane', library:'libraryPane', activity:'activityPane', toolkit:'toolkitPane', migrate:'migratePane', accounts:'accountsPane', settings:'settingsPane' };
+const PANE_IDS = { home:'homePane', addons:'addonsPane', stremioaddons:'stremioAddonsPane', market:'marketPane', discover:'discoverPane', collections:'collectionsPane', community:'communityPane', plugins:'pluginsPane', catalogues:'cataloguesPane', kidsprofile:'kidsProfilePane', profilemgr:'profileMgrPane', profilecustom:'profileCustomPane', profileclone:'profileClonePane', library:'libraryPane', activity:'activityPane', toolkit:'toolkitPane', migrate:'migratePane', accounts:'accountsPane', settings:'settingsPane' };
 function paneFromHash(){ const h = location.hash.replace(/^#\/?/, ''); return PANE_IDS[h] ? h : null; }
 function switchPane(name, opts = {}){
   activePane = name;
@@ -2063,7 +2126,7 @@ function switchPane(name, opts = {}){
   });
   syncNavGroups(name);
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-  if (!session) { $('signinPane').classList.add('active'); return; }
+  if (!session && name !== 'migrate' && name !== 'market' && name !== 'stremioaddons') { $('signinPane').classList.add('active'); return; }
   const id = PANE_IDS[name];
   $(id).classList.add('active');
   if (opts.focusHeading !== false) {
@@ -2072,6 +2135,10 @@ function switchPane(name, opts = {}){
   }
   if (name === 'home') renderHomeDashboard();
   if (name === 'market' && !marketItems.length) loadMarket();
+  if (name === 'stremioaddons') {
+    if (stremioAddonManager.remoteFingerprint === null && !stremioAddonManager.loading) loadStremioAddonManager();
+    else renderStremioAddonManager();
+  }
   if (name === 'discover') { if (!discoverState.loaded && !discoverState.loading) loadDiscover(); else renderDiscover(); }
   if (name === 'community') renderCommunity();
   if (name === 'catalogues') renderCatalogues();
@@ -2083,7 +2150,13 @@ function switchPane(name, opts = {}){
   if (name === 'library') { if (libraryState.snapshot === null) loadLibrary(); else renderLibrary(); }
   if (name === 'activity') { if (!activityState.progress.length && !activityState.history.length) loadActivity(); else renderActivity(); }
   if (name === 'toolkit') renderToolkit();
-  if (name === 'migrate') renderMigrate();
+  if (name === 'migrate') {
+    renderMigrate();
+    if (libraryState.snapshot === null) loadLibrary().then(renderMigrate);
+    if (stremioIsConnected() && !migrateState.data && !migrateState.loading) {
+      refreshStremioData().then(renderMigrate).catch(e => { migrateState.error = e; renderMigrate(); setStremioMessage(e.message || String(e), true); });
+    }
+  }
   if (name === 'accounts') renderAccounts();
   if (name === 'settings') loadSettingsBlobs();
 }
@@ -4029,10 +4102,15 @@ function renderMarket(){
   const grid = $('marketGrid');
   if (!groups.length) { grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">No matches.</div>`; return; }
 
+  const target = getMarketInstallTarget();
   const installed = new Set(R.addon.items.map(a => normalizeUrl(a.url)));
+  const stremioInstalled = new Set(((migrateState.data && migrateState.data.addons) || []).map(a => normalizeUrl(a.url)));
   grid.innerHTML = groups.map((g, gi) => {
     const def = g.variants[0];
-    const isInstalled = g.variants.some(v => installed.has(normalizeUrl(v.url)));
+    const isInstalled = g.variants.some(v => {
+      const key = normalizeUrl(v.url);
+      return target === 'nuvio' ? installed.has(key) : (target === 'stremio' ? stremioInstalled.has(key) : (installed.has(key) && stremioInstalled.has(key)));
+    });
     const initial = (g.family || '?').replace(/[^A-Za-z0-9]/g,'').charAt(0).toUpperCase() || '?';
     const logoHtml = def.logo
       ? `<img data-logo data-has-initial-logo="1" class="market-logo" src="${esc(def.logo)}" alt="" onerror="this.removeAttribute('src');this.classList.add('placeholder');this.textContent='${esc(initial)}';" />`
@@ -4055,7 +4133,7 @@ function renderMarket(){
       <div class="market-card-meta" data-host>${esc(shortHost(def.url))}</div>
       ${variantSel}
       <div class="market-card-btns">
-        <button class="btn btn-xs btn-amber" data-install onclick="installMarketVariant(${gi})">＋ Install</button>
+        <button class="btn btn-xs btn-amber" data-install onclick="installMarketVariant(${gi})">＋ Install in ${target === 'both' ? 'Both' : (target === 'stremio' ? 'Stremio' : 'Nuvio')}</button>
         <a class="btn btn-xs btn-ghost" data-config target="_blank" rel="noopener" href="${esc(def.configureUrl || configureUrlFor(def.url))}">⚙ Configure</a>
         <a class="btn btn-xs btn-ghost" data-nuvio href="${esc(nuvioUrlOf(def.url))}">Open in Nuvio</a>
       </div>
@@ -4064,6 +4142,16 @@ function renderMarket(){
   setTimeout(prefetchMarketLogos, 50);
 }
 function normalizeUrl(u){ return manifestUrlOf(u).replace(/\/+$/,'').toLowerCase(); }
+function getMarketInstallTarget(){
+  const value = ($('marketInstallTarget') && $('marketInstallTarget').value) || store.get('pb_market_install_target') || 'nuvio';
+  return ['nuvio','stremio','both'].includes(value) ? value : 'nuvio';
+}
+function setMarketInstallTarget(value){
+  const target = ['nuvio','stremio','both'].includes(value) ? value : 'nuvio';
+  store.set('pb_market_install_target', target);
+  if ($('marketInstallTarget')) $('marketInstallTarget').value = target;
+  renderMarket();
+}
 function onVariantChange(gi, vi){
   const groups = groupedMarketItems();
   const v = groups[gi].variants[vi];
@@ -4092,27 +4180,68 @@ function onVariantChange(gi, vi){
   const pop = card.querySelector('.market-popularity');
   if (pop) pop.textContent = v.popularity ? `★ ${fmtPop(v.popularity)} likes` : '★ popularity unavailable';
 }
-function installMarketVariant(gi){
+async function installMarketVariant(gi){
   const groups = groupedMarketItems();
   const card = document.querySelector(`#marketGrid [data-group-idx="${gi}"]`);
   const vi = parseInt(card && card.dataset.selectedVariant || '0', 10);
   const v = groups[gi].variants[vi];
   const url = manifestUrlOf(v.url);
-  if (R.addon.items.some(a => normalizeUrl(a.url) === normalizeUrl(url))) { toast('Already installed'); return; }
-  R.addon.items.push({ url, name: v.name || v.family || null, enabled: true, status: 'idle' });
-  renderRack('addon'); fetchManifest('addon', R.addon.items.length - 1); checkDirty('addon');
-  toast(`Staged "${v.name || v.family}" — push from the Addons tab to save to Nuvio`);
-  if (card) card.classList.add('installed');
+  const target = getMarketInstallTarget();
+  if ((target === 'nuvio' || target === 'both') && !session) {
+    toast('Sign in to Nuvio first, or choose Stremio as the install target');
+    switchPane('home');
+    return;
+  }
+  if ((target === 'stremio' || target === 'both') && !stremioIsConnected()) {
+    toast('Connect Stremio first');
+    switchPane('migrate');
+    return;
+  }
+  let nuvioAdded = false, stremioAdded = 0;
+  try {
+    if (target === 'nuvio' || target === 'both') {
+      if (!R.addon.items.some(a => normalizeUrl(a.url) === normalizeUrl(url))) {
+        R.addon.items.push({ url, name: v.name || v.family || null, enabled: true, status: 'idle' });
+        renderRack('addon'); fetchManifest('addon', R.addon.items.length - 1); checkDirty('addon');
+        nuvioAdded = true;
+      }
+    }
+    if (target === 'stremio' || target === 'both') {
+      const result = await stremioMergeAddonItems([{ url, name: v.name || v.family || null }]);
+      stremioAdded = result.added;
+    }
+    if (card) card.classList.add('installed');
+    const bits = [];
+    if (nuvioAdded) bits.push('staged for Nuvio');
+    if (stremioAdded) bits.push('installed in Stremio');
+    if (!bits.length) bits.push('already installed');
+    toast((v.name || v.family) + ': ' + bits.join(' · '));
+    renderMarket();
+  } catch (e) {
+    toast('Install partial/failed: ' + (e.message || String(e)));
+  }
 }
-function installManualUrl(){
+async function installManualUrl(){
   let u;
   try { u = normalizeHttpUrl($('manualUrl').value, { manifest: true }); }
   catch(e){ toast(e.message || 'Invalid URL'); return; }
-  if (R.addon.items.some(a => normalizeUrl(a.url) === normalizeUrl(u))) { toast('Already in the rack'); return; }
-  R.addon.items.push({ url: u, name: null, enabled: true, status: 'idle' });
-  $('manualUrl').value = '';
-  renderRack('addon'); fetchManifest('addon', R.addon.items.length - 1); checkDirty('addon');
-  toast('Staged in addon rack — push to save to Nuvio');
+  const target = getMarketInstallTarget();
+  if ((target === 'nuvio' || target === 'both') && !session) { toast('Sign in to Nuvio first, or choose Stremio as the install target'); switchPane('home'); return; }
+  if ((target === 'stremio' || target === 'both') && !stremioIsConnected()) { toast('Connect Stremio first'); switchPane('migrate'); return; }
+  try {
+    let nuvioAdded = false, stremioAdded = 0;
+    if (target === 'nuvio' || target === 'both') {
+      if (!R.addon.items.some(a => normalizeUrl(a.url) === normalizeUrl(u))) {
+        R.addon.items.push({ url: u, name: null, enabled: true, status: 'idle' });
+        renderRack('addon'); fetchManifest('addon', R.addon.items.length - 1); checkDirty('addon');
+        nuvioAdded = true;
+      }
+    }
+    if (target === 'stremio' || target === 'both') stremioAdded = (await stremioMergeAddonItems([{ url: u }])).added;
+    $('manualUrl').value = '';
+    toast([nuvioAdded ? 'staged for Nuvio' : '', stremioAdded ? 'installed in Stremio' : ''].filter(Boolean).join(' · ') || 'Already installed');
+    renderMarket();
+  } catch (e) { toast('Install failed: ' + (e.message || String(e))); }
 }
 
 /* ════════════════════ DISCOVER (curated MDBList collections) ════════════════════
@@ -6049,7 +6178,7 @@ function renderLibrary(){
   const items = libraryState.items || [];
   count.textContent = items.length + (items.length === 1 ? ' item' : ' items');
   grid.classList.toggle('selecting', !!libraryState.selecting);
-  if (!items.length) { grid.innerHTML = '<div class="empty">No library items on this profile yet. Add to your library from the Nuvio app, or migrate from Stremio.</div>'; renderLibraryBulkBar(); return; }
+  if (!items.length) { grid.innerHTML = '<div class="empty">No library items on this profile yet. Add to your library from Nuvio, or merge them from Stremio Sync.</div>'; renderLibraryBulkBar(); return; }
   const filtering = !!(libraryState.filter || ($('libraryTypeFilter') && $('libraryTypeFilter').value));
   const visible = items.map((it, i) => ({ it, i })).filter(x => libraryMatches(x.it));
   if (!visible.length) { grid.innerHTML = '<div class="empty">No library items match the current filter.</div>'; renderLibraryBulkBar(); return; }
@@ -6233,13 +6362,13 @@ function renderActivity(){
   host.innerHTML = section('Continue watching', prog, 'progress') + section('Watch history', hist, 'history');
 }
 
-/* ════════════════════ STREMIO MIGRATION ════════════════════ */
-const STREMIO_OFFICIAL_RE = /^(https?:\/\/)?(v3-cinemeta|opensubtitles|torrent-?support|stremio-core|linvodb|images\.metahub| emulator-config)\./i;
+/* ════════════════════ STREMIO PROVIDER SYNC ════════════════════ */
+const STREMIO_OFFICIAL_RE = /^(https?:\/\/)?(v3-cinemeta|opensubtitles|torrent-?support|stremio-core|linvodb|images\.metahub|emulator-config)\./i;
 function isOfficialStremioAddon(a){
   const url = a && (a.transportUrl || a.url) || '';
   const m = a && a.manifest;
   if (m && m.behaviorHints && m.behaviorHints.official) return true;
-  if (a && a.protected) return true;
+  if (a && (a.protected || a.official || (a.flags && (a.flags.protected || a.flags.official)))) return true;
   return STREMIO_OFFICIAL_RE.test(url) || /cinemeta|opensubtitles|stremio\/official/i.test(url);
 }
 function stremioAddonUrl(a){
@@ -6249,51 +6378,71 @@ function stremioAddonUrl(a){
   if (/\/manifest\.json/i.test(u)) return u;
   return u.replace(/\/+$/, '') + '/manifest.json';
 }
-async function stremioLogin(email, password){
-  const r = await fetch(STREMIO_API + '/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'Login', email, password })
+function loadStremioConnection(){
+  try {
+    const saved = JSON.parse(store.get(STREMIO_CONNECTION_KEY) || 'null');
+    if (saved && saved.authKey) {
+      migrateState.authKey = String(saved.authKey);
+      migrateState.stremioUser = saved.user || null;
+      migrateState.persist = true;
+    }
+  } catch { store.del(STREMIO_CONNECTION_KEY); }
+}
+function persistStremioConnection(){
+  if (migrateState.persist && migrateState.authKey && !migrateState.fileMode) {
+    store.set(STREMIO_CONNECTION_KEY, JSON.stringify({ authKey: migrateState.authKey, user: migrateState.stremioUser || null }));
+  } else {
+    store.del(STREMIO_CONNECTION_KEY);
+  }
+}
+function stremioIsConnected(){ return !!migrateState.authKey && !migrateState.fileMode && migrateState.authKey !== '(file)'; }
+function stremioApiError(data, fallback){
+  const e = data && data.error;
+  return (e && (e.message || e.code)) || (data && data.message) || fallback;
+}
+async function stremioRequest(path, body){
+  const r = await fetch(STREMIO_API + '/' + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
   const data = await r.json().catch(() => ({}));
-  if (!data || data.error || !data.result || !data.result.authKey) {
-    throw new Error((data && data.error && data.error.message) || 'Stremio login failed');
-  }
-  return data.result;
+  if (!r.ok || (data && data.error)) throw new Error(stremioApiError(data, 'Stremio ' + path + ' failed (HTTP ' + r.status + ')'));
+  return data && Object.prototype.hasOwnProperty.call(data, 'result') ? data.result : data;
+}
+async function stremioLogin(email, password){
+  const result = await stremioRequest('login', { type: 'Login', email, password, facebook: false });
+  if (!result || !result.authKey) throw new Error('Stremio login did not return an auth key');
+  return result;
+}
+async function stremioGetUser(authKey){
+  try { return await stremioRequest('getUser', { type: 'GetUser', authKey }); }
+  catch { return null; }
 }
 async function stremioFetch(authKey){
-  // primary: dataExport (all-in-one); fallbacks for addons + library
-  let addons = [], library = [];
+  const addonResult = await stremioRequest('addonCollectionGet', { type: 'AddonCollectionGet', authKey, update: true });
+  const addons = addonResult && Array.isArray(addonResult.addons) ? addonResult.addons : (Array.isArray(addonResult) ? addonResult : []);
+  let libraryResult;
   try {
-    const r = await fetch(STREMIO_API + '/dataExport', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'DataExport', authKey })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (data && data.result) {
-      const res = data.result;
-      if (Array.isArray(res.addons)) addons = res.addons;
-      if (Array.isArray(res.library)) library = res.library;
-    }
-  } catch {}
-  if (!addons.length) {
-    const r = await fetch(STREMIO_API + '/addonCollectionGet', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'AddonCollectionGet', authKey, update: true })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (data && data.result && Array.isArray(data.result.addons)) addons = data.result.addons;
+    libraryResult = await stremioRequest('datastoreGet', { authKey, collection: 'libraryItem', ids: [], all: true });
+  } catch {
+    // Compatibility fallback for older Stremio API deployments.
+    libraryResult = await stremioRequest('datastoreGet', { type: 'DatastoreGet', authKey, collection: 'libraryItem', request: { all: true } });
   }
-  if (!library.length) {
-    try {
-      const r = await fetch(STREMIO_API + '/datastoreGet', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'DatastoreGet', authKey, collection: 'libraryItem', request: { all: true } })
-      });
-      const data = await r.json().catch(() => ({}));
-      if (data && data.result && Array.isArray(data.result)) library = data.result;
-    } catch {}
-  }
+  const library = Array.isArray(libraryResult) ? libraryResult
+    : (libraryResult && Array.isArray(libraryResult.items) ? libraryResult.items
+      : (libraryResult && Array.isArray(libraryResult.library) ? libraryResult.library : []));
   return { addons, library };
+}
+async function refreshStremioData(){
+  if (!stremioIsConnected()) throw new Error('Connect a Stremio account first');
+  migrateState.loading = true;
+  try {
+    const raw = await stremioFetch(migrateState.authKey);
+    migrateState.raw = raw;
+    migrateState.data = migrateMapData(raw);
+    migrateState.error = null;
+    adoptStremioAddonRemote(false);
+    return migrateState.data;
+  } finally { migrateState.loading = false; }
 }
 function parseStremioExportFile(text){
   const data = JSON.parse(text);
@@ -6322,143 +6471,708 @@ function migrateMapData(data){
     const d = (it && it.d && typeof it.d === 'object') ? it.d : it;
     const st = (d && d.state) || (it && it.state) || {};
     const id = libraryItemId(it);
-    if (st.time_offset && st.duration) progress.push({ id, type: (d && d.type) || 'movie', time_offset: st.time_offset, duration: st.duration });
-    if (st.flagged_watched || st.times_watched || st.time_watched) history.push({ id, type: (d && d.type) || 'movie', times_watched: st.times_watched || 0 });
+    const timeOffset = Number(st.timeOffset ?? st.time_offset) || 0;
+    const duration = Number(st.duration) || 0;
+    const timesWatched = Number(st.timesWatched ?? st.times_watched) || 0;
+    const flaggedWatched = Number(st.flaggedWatched ?? st.flagged_watched) || 0;
+    const timeWatched = Number(st.timeWatched ?? st.time_watched) || 0;
+    if (timeOffset && duration) progress.push({ id, type: (d && d.type) || 'movie', time_offset: timeOffset, duration });
+    if (flaggedWatched || timesWatched || timeWatched) history.push({ id, type: (d && d.type) || 'movie', times_watched: timesWatched || flaggedWatched || 1 });
   }
   return { addons: uniqAddons, library, progress, history };
 }
+function stremioCompare(){
+  const data = migrateState.data || { addons: [], library: [] };
+  const nAdd = new Map((R.addon.items || []).filter(a => a.enabled !== false && a.url).map(a => [normalizeUrl(a.url), a]));
+  const sAdd = new Map((data.addons || []).filter(a => a.url).map(a => [normalizeUrl(a.url), a]));
+  const nLib = new Map((libraryState.items || []).filter(it => !libraryDisplay(it).removed).map(it => [libraryItemId(it), it]));
+  const sLib = new Map((data.library || []).filter(it => !libraryDisplay(it).removed).map(it => [libraryItemId(it), it]));
+  const countOnly = (a, b) => [...a.keys()].filter(key => !b.has(key)).length;
+  return {
+    nuvioAddons: nAdd.size, stremioAddons: sAdd.size,
+    addonsOnlyNuvio: countOnly(nAdd, sAdd), addonsOnlyStremio: countOnly(sAdd, nAdd), addonsBoth: [...nAdd.keys()].filter(key => sAdd.has(key)).length,
+    nuvioLibrary: nLib.size, stremioLibrary: sLib.size,
+    libraryOnlyNuvio: countOnly(nLib, sLib), libraryOnlyStremio: countOnly(sLib, nLib), libraryBoth: [...nLib.keys()].filter(key => sLib.has(key)).length
+  };
+}
+function stremioTransportUrl(manifestUrl){
+  return manifestUrlOf(manifestUrl).replace(/\/manifest\.json(?:[?#].*)?$/i, '/');
+}
+async function stremioFetchManifestDescriptor(item){
+  const manifestUrl = manifestUrlOf(item.url || item.transportUrl || '');
+  if (!manifestUrl) throw new Error('Missing add-on manifest URL');
+  let manifest = item.manifest && item.manifest.id ? item.manifest : null;
+  if (!manifest) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 15000);
+    try {
+      const r = await fetch(manifestUrl, { signal: ctl.signal, cache: 'no-cache' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      manifest = await r.json();
+    } catch (e) {
+      throw new Error((item.name || shortHost(manifestUrl)) + ': could not load manifest (' + (e.name === 'AbortError' ? 'timed out' : e.message) + ')');
+    } finally { clearTimeout(timer); }
+  }
+  if (!manifest || !manifest.id || !manifest.version || !manifest.name) throw new Error('Invalid manifest from ' + shortHost(manifestUrl));
+  return {
+    manifest,
+    transportUrl: stremioTransportUrl(manifestUrl),
+    flags: item.flags || { official: false, protected: false }
+  };
+}
+async function stremioDescriptorsFor(items){
+  const out = [];
+  for (let i = 0; i < items.length; i += 5) {
+    const batch = await Promise.all(items.slice(i, i + 5).map(stremioFetchManifestDescriptor));
+    out.push(...batch);
+  }
+  return out;
+}
+function stremioDescriptorUrl(item){ return normalizeUrl(stremioAddonUrl(item)); }
+async function stremioSetAddonCollection(addons, note){
+  if (!stremioIsConnected()) throw new Error('Connect a Stremio account first');
+  const backupKey = stremioAddonBackupKey();
+  store.set(backupKey, JSON.stringify({ at: new Date().toISOString(), note: note || 'before sync', addons: migrateState.raw.addons || [] }));
+  await stremioRequest('addonCollectionSet', { type: 'AddonCollectionSet', authKey: migrateState.authKey, addons });
+}
+async function stremioMergeAddonItems(items){
+  if (stremioAddonManager.dirty) throw new Error('Save or discard staged Stremio add-on changes first');
+  await refreshStremioData();
+  const current = (migrateState.raw.addons || []).slice();
+  const initialByUrl = new Map(current.filter(a => stremioAddonUrl(a)).map(a => [stremioDescriptorUrl(a), a]));
+  const missing = [];
+  for (const item of items) {
+    const url = manifestUrlOf(item.url || item.transportUrl || '');
+    if (url && !initialByUrl.has(normalizeUrl(url))) missing.push({ ...item, url });
+  }
+  if (!missing.length) return { added: 0, total: current.length };
+  const descriptors = await stremioDescriptorsFor(missing);
+  // Re-pull after manifest loading so addonCollectionSet never overwrites a newer collection snapshot.
+  const latest = await stremioFetch(migrateState.authKey);
+  migrateState.raw = latest;
+  migrateState.data = migrateMapData(latest);
+  const byUrl = new Map((latest.addons || []).filter(a => stremioAddonUrl(a)).map(a => [stremioDescriptorUrl(a), a]));
+  let added = 0;
+  descriptors.forEach(d => {
+    const key = stremioDescriptorUrl(d);
+    if (!byUrl.has(key)) { byUrl.set(key, d); added++; }
+  });
+  if (!added) return { added: 0, total: byUrl.size };
+  const merged = [...byUrl.values()];
+  await stremioSetAddonCollection(merged, 'before merge');
+  await refreshStremioData();
+  return { added, total: merged.length };
+}
+function stremioLibraryState(source){
+  const state = source && source.state || {};
+  const num = (...keys) => { for (const key of keys) if (state[key] !== undefined && state[key] !== null) return Number(state[key]) || 0; return 0; };
+  const val = (...keys) => { for (const key of keys) if (state[key] !== undefined) return state[key]; return null; };
+  return {
+    lastWatched: val('lastWatched', 'last_watched'),
+    timeWatched: num('timeWatched', 'time_watched'),
+    timeOffset: num('timeOffset', 'time_offset'),
+    overallTimeWatched: num('overallTimeWatched', 'overall_time_watched'),
+    timesWatched: num('timesWatched', 'times_watched'),
+    flaggedWatched: num('flaggedWatched', 'flagged_watched'),
+    duration: num('duration'),
+    video_id: val('video_id', 'videoId'),
+    watched: val('watched'),
+    noNotif: !!val('noNotif', 'no_notif')
+  };
+}
+function nuvioActivityOverlayFor(contentId){
+  const progress = (activityState.progress || []).find(item => activityItem(item).id === contentId);
+  const history = (activityState.history || []).find(item => activityItem(item).id === contentId);
+  const raw = item => (item && item.d && typeof item.d === 'object') ? item.d : (item || {});
+  const p = raw(progress), ps = p.state || {};
+  const h = raw(history), hs = h.state || {};
+  return {
+    hasProgress: !!progress,
+    hasHistory: !!history,
+    timeOffset: Number(ps.timeOffset ?? ps.time_offset ?? p.position) || 0,
+    duration: Number(ps.duration ?? p.duration) || 0,
+    lastWatched: ps.lastWatched || ps.last_watched || p.last_watched || p.updated_at || hs.lastWatched || hs.last_watched || h.watched_at || h.updated_at || null,
+    timesWatched: Number(hs.timesWatched ?? hs.times_watched ?? h.times_watched) || (history ? 1 : 0),
+    flaggedWatched: Number(hs.flaggedWatched ?? hs.flagged_watched ?? h.flagged_watched) || (history ? 1 : 0)
+  };
+}
+function stremioLibraryItemFromNuvio(item, existing){
+  const d = (item && item.d && typeof item.d === 'object') ? item.d : item;
+  const shown = libraryDisplay(item);
+  const now = new Date().toISOString();
+  const base = existing || {};
+  const state = stremioLibraryState(d || item);
+  const overlay = nuvioActivityOverlayFor(shown.id);
+  if (overlay.hasProgress) {
+    state.timeOffset = overlay.timeOffset;
+    if (overlay.duration) state.duration = overlay.duration;
+  }
+  if (overlay.lastWatched) state.lastWatched = overlay.lastWatched;
+  if (overlay.hasHistory) {
+    state.timesWatched = Math.max(state.timesWatched, overlay.timesWatched);
+    state.flaggedWatched = Math.max(state.flaggedWatched, overlay.flaggedWatched);
+  }
+  return {
+    ...base,
+    _id: shown.id,
+    name: shown.name || base.name || shown.id,
+    type: shown.type || base.type || 'movie',
+    poster: shown.poster || base.poster || null,
+    posterShape: shown.posterShape || base.posterShape || 'poster',
+    removed: false,
+    temp: false,
+    _ctime: base._ctime || (d && d._ctime) || now,
+    _mtime: now,
+    state,
+    behaviorHints: (d && d.behaviorHints) || base.behaviorHints || { defaultVideoId: null, featuredVideoId: null, hasScheduledVideos: false }
+  };
+}
+async function stremioPutLibrary(items){
+  if (!stremioIsConnected()) throw new Error('Connect a Stremio account first');
+  const existing = new Map((migrateState.raw.library || []).map(it => [libraryItemId(it), it]));
+  const changes = (items || []).filter(it => libraryItemId(it)).map(it => stremioLibraryItemFromNuvio(it, existing.get(libraryItemId(it))));
+  if (!changes.length) return { changed: 0 };
+  for (let i = 0; i < changes.length; i += 500) {
+    await stremioRequest('datastorePut', { authKey: migrateState.authKey, collection: 'libraryItem', changes: changes.slice(i, i + 500) });
+  }
+  return { changed: changes.length };
+}
+function mergeLibraryById(primary, secondary, preferSecondary = true){
+  const byId = new Map();
+  (primary || []).forEach(it => { const id = libraryItemId(it); if (id) byId.set(id, it); });
+  (secondary || []).forEach(it => {
+    const id = libraryItemId(it); if (!id) return;
+    if (!byId.has(id) || preferSecondary) byId.set(id, it);
+  });
+  return [...byId.values()].filter(it => !libraryDisplay(it).removed);
+}
+async function mergeStremioActivityIntoNuvio(data){
+  const jobs = [];
+  if (data.progress && data.progress.length) jobs.push(rpcResourcePush('sync_push_watch_progress', currentProfile, data.progress));
+  if (data.history && data.history.length) jobs.push(rpcResourcePush('sync_push_watched_items', currentProfile, data.history));
+  await Promise.all(jobs);
+  activityCache.clear();
+  return { progress: data.progress.length, history: data.history.length };
+}
+async function stageStremioIntoNuvio(options = {}){
+  if (!session) throw new Error('Sign in to Nuvio before importing Stremio data');
+  const data = migrateState.data || await refreshStremioData();
+  if (libraryState.snapshot === null) await loadLibrary();
+  if (options.confirm !== false) {
+    const diff = stremioCompare();
+    if (!await confirmDialog('Merge Stremio into the active Nuvio profile?\n\n' + diff.addonsOnlyStremio + ' add-ons and ' + diff.libraryOnlyStremio + ' library items exist only in Stremio. Existing Nuvio items are kept. Watch progress/history merge immediately.', { title: 'Stremio → Nuvio', okLabel: 'Merge into Nuvio' })) return null;
+  }
+  let addedAddons = 0;
+  for (const addon of data.addons || []) {
+    if (!R.addon.items.some(a => normalizeUrl(a.url) === normalizeUrl(addon.url))) { R.addon.items.push({ ...addon }); addedAddons++; }
+  }
+  if (addedAddons) { renderRack('addon'); refreshManifests('addon'); checkDirty('addon'); }
+  const beforeLibrary = JSON.parse(JSON.stringify(libraryState.items || []));
+  const mergedLibrary = mergeLibraryById(libraryState.items, data.library, true);
+  if (JSON.stringify(mergedLibrary) !== JSON.stringify(libraryState.items || [])) {
+    store.set('pb_backup_library_p' + currentProfile, JSON.stringify({ at: new Date().toISOString(), prev: beforeLibrary }));
+    libraryState.items = mergedLibrary;
+    libraryState.dirty = true;
+    renderLibrary(); updateDirty();
+  }
+  const activity = await mergeStremioActivityIntoNuvio(data);
+  return { addons: addedAddons, library: Math.max(0, mergedLibrary.length - beforeLibrary.length), ...activity };
+}
+async function pushNuvioIntoStremio(options = {}){
+  if (!session) throw new Error('Sign in to Nuvio before exporting Nuvio data');
+  if (!stremioIsConnected()) throw new Error('Connect a Stremio account first');
+  await refreshStremioData();
+  if (libraryState.snapshot === null) await loadLibrary();
+  if (!activityState.loading && !activityState.progress.length && !activityState.history.length) await loadActivity(true);
+  const diff = stremioCompare();
+  if (options.confirm !== false && !await confirmDialog('Merge the active Nuvio profile into Stremio?\n\n' + diff.addonsOnlyNuvio + ' add-ons and ' + diff.libraryOnlyNuvio + ' library items exist only in Nuvio. Existing Stremio items remain installed.', { title: 'Nuvio → Stremio', okLabel: 'Merge into Stremio' })) return null;
+  const addonResult = await stremioMergeAddonItems((R.addon.items || []).filter(a => a.enabled !== false && a.url));
+  const libraryResult = await stremioPutLibrary((libraryState.items || []).filter(it => !libraryDisplay(it).removed));
+  await refreshStremioData();
+  return { addons: addonResult.added, library: libraryResult.changed };
+}
+async function mergeBothProviders(){
+  if (!session) throw new Error('Sign in to Nuvio before merging both providers');
+  await refreshStremioData();
+  if (libraryState.snapshot === null) await loadLibrary();
+  const diff = stremioCompare();
+  if (!await confirmDialog('Merge both providers?\n\nNuvio-only: ' + diff.addonsOnlyNuvio + ' add-ons, ' + diff.libraryOnlyNuvio + ' library items.\nStremio-only: ' + diff.addonsOnlyStremio + ' add-ons, ' + diff.libraryOnlyStremio + ' library items.\n\nNothing is removed. Nuvio changes are staged for review; Stremio additions are written now.', { title: 'Two-way merge', okLabel: 'Merge both' })) return null;
+  const staged = await stageStremioIntoNuvio({ confirm: false });
+  const pushed = await pushNuvioIntoStremio({ confirm: false });
+  return { staged, pushed };
+}
+async function mirrorStremioAddonsFromNuvio(){
+  if (!session) throw new Error('Sign in to Nuvio before mirroring add-ons');
+  if (stremioAddonManager.dirty) throw new Error('Save or discard staged Stremio add-on changes first');
+  await refreshStremioData();
+  const current = migrateState.raw.addons || [];
+  const community = current.filter(a => !isOfficialStremioAddon(a));
+  const desired = (R.addon.items || []).filter(a => a.enabled !== false && a.url);
+  const desiredKeys = new Set(desired.map(a => normalizeUrl(a.url)));
+  const previewCommunityKeys = new Set(community.map(stremioDescriptorUrl));
+  const removeCount = community.filter(a => !desiredKeys.has(stremioDescriptorUrl(a))).length;
+  const typed = await promptDialog('This mirrors Nuvio\'s enabled add-ons to Stremio and removes ' + removeCount + ' Stremio-only community add-on' + (removeCount === 1 ? '' : 's') + '. Official/protected add-ons are preserved.\n\nType MIRROR to continue:', { title: 'Mirror Stremio add-ons', okLabel: 'Mirror', placeholder: 'MIRROR' });
+  if (typed !== 'MIRROR') { toast('Mirror cancelled'); return null; }
+  const currentByUrl = new Map(current.filter(a => stremioAddonUrl(a)).map(a => [stremioDescriptorUrl(a), a]));
+  const missing = [];
+  desired.forEach(item => {
+    const existing = currentByUrl.get(normalizeUrl(item.url));
+    if (!existing) missing.push(item);
+  });
+  const descriptors = await stremioDescriptorsFor(missing);
+  const descriptorByUrl = new Map(descriptors.map(item => [stremioDescriptorUrl(item), item]));
+  // Re-pull immediately before replacement and reject any community additions not shown in the preview.
+  const latest = await stremioFetch(migrateState.authKey);
+  migrateState.raw = latest;
+  migrateState.data = migrateMapData(latest);
+  const latestCommunity = (latest.addons || []).filter(a => !isOfficialStremioAddon(a));
+  const unexpected = latestCommunity.filter(a => {
+    const key = stremioDescriptorUrl(a);
+    return !previewCommunityKeys.has(key) && !desiredKeys.has(key);
+  });
+  if (unexpected.length) throw new Error('Stremio changed after the mirror preview. Refresh and review again so new add-ons are not removed.');
+  const latestProtected = (latest.addons || []).filter(isOfficialStremioAddon);
+  const latestByUrl = new Map((latest.addons || []).filter(a => stremioAddonUrl(a)).map(a => [stremioDescriptorUrl(a), a]));
+  const desiredDescriptors = desired.map(item => latestByUrl.get(normalizeUrl(item.url)) || descriptorByUrl.get(normalizeUrl(item.url))).filter(Boolean);
+  const next = [...latestProtected, ...desiredDescriptors];
+  const unique = [...new Map(next.map(a => [stremioDescriptorUrl(a), a])).values()];
+  await stremioSetAddonCollection(unique, 'before mirror');
+  await refreshStremioData();
+  return { removed: removeCount, added: descriptors.length, total: unique.length };
+}
+function setStremioMessage(message, error = false){
+  const msg = $('migrateMsg');
+  if (msg) msg.innerHTML = '<div class="alert ' + (error ? 'alert-err' : 'alert-ok') + '">' + esc(message) + '</div>';
+}
+function setStremioRemember(on){
+  migrateState.persist = !!on;
+  persistStremioConnection();
+  toast(on ? 'Stremio connection will be remembered on this device' : 'Stremio connection is session-only');
+}
 function renderMigrate(){
   const host = $('migrateContent'); if (!host) return;
-  const p = profiles.find(x => x.profile_index === currentProfile) || null;
-  const targetName = profileDisplayName(p);
+  const connected = stremioIsConnected();
   const data = migrateState.data;
-  const dataBlock = data ? `
-    <div class="settings-block">
-      <div class="settings-block-head"><h3>Step 2 · What was found</h3><span class="platform-chip">from Stremio</span></div>
-      <div style="padding:0 16px 14px;">
-        <div class="avatar-grid">
-          <div class="avatar-card"><div class="avatar-label">Add-ons</div><div class="format-preview-name">${data.addons.length}</div><div class="format-preview-desc">community add-ons (official ones skipped)</div></div>
-          <div class="avatar-card"><div class="avatar-label">Library</div><div class="format-preview-name">${data.library.length}</div><div class="format-preview-desc">saved titles</div></div>
-        </div>
-        <div class="alert alert-warn" style="margin:12px 0 0;">Migrating into <strong>${esc(targetName)}</strong> (profile ${currentProfile}). Add-ons are staged in your add-on rack; library, progress and history are pushed straight to this profile.</div>
-      </div>
-    </div>` : '';
-  const runBlock = data ? `
-    <div class="settings-block">
-      <div class="settings-block-head"><h3>Step 3 · Run migration</h3></div>
-      <div style="padding:0 16px 14px;">
-        <div class="settings-rules-preview">
-          <label class="settings-rule-row ok"><input type="checkbox" checked data-mig="addons" style="width:auto;" /> <span><span class="rule-name">Stage ${data.addons.length} add-ons</span><span class="rule-meta">review in Add-ons, then push</span></span></label>
-          <label class="settings-rule-row ok"><input type="checkbox" checked data-mig="library" style="width:auto;" /> <span><span class="rule-name">Push ${data.library.length} library items</span><span class="rule-meta">full replace on profile ${currentProfile}</span></span></label>
-          <label class="settings-rule-row ${data.progress.length ? 'ok' : 'bad'}"><input type="checkbox" ${data.progress.length ? 'checked' : 'disabled'} data-mig="progress" style="width:auto;" /> <span><span class="rule-name">Merge ${data.progress.length} progress entries</span><span class="rule-meta">continue watching</span></span></label>
-          <label class="settings-rule-row ${data.history.length ? 'ok' : 'bad'}"><input type="checkbox" ${data.history.length ? 'checked' : 'disabled'} data-mig="history" style="width:auto;" /> <span><span class="rule-name">Merge ${data.history.length} history entries</span><span class="rule-meta">watch history</span></span></label>
-        </div>
-        <div style="margin-top:12px;"><button class="btn btn-green" onclick="runMigration()">&#8646; Migrate to ${esc(targetName)}</button></div>
-        <div id="migrateMsg"></div>
-      </div>
-    </div>` : '';
-  host.innerHTML = `
-    <div class="settings-block">
-      <div class="settings-block-head"><h3>Step 1 · Connect Stremio</h3><span class="platform-chip">${migrateState.authKey ? 'connected' : 'not connected'}</span></div>
-      <div style="padding:0 16px 14px;">
-        <div class="fg"><label>Stremio auth key (recommended)</label><input id="migrateAuthKey" placeholder="Paste your Stremio auth key" value="${esc(migrateState.authKey || '')}" autocomplete="off" /></div>
-        <p class="hint">In Stremio Web, open DevTools console and run <code>copy(JSON.parse(localStorage.getItem("profile")).auth.key)</code> to copy it.</p>
-        <div class="grid2" style="margin-top:8px;">
-          <div class="fg" style="margin:0;"><label>Or email</label><input id="migrateEmail" type="email" placeholder="your@stremio.email" autocomplete="username" /></div>
-          <div class="fg" style="margin:0;"><label>password</label><input id="migratePass" type="password" placeholder="Stremio password" autocomplete="current-password" /></div>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center;">
-          <button class="btn btn-amber" onclick="migrateConnect()">Connect &amp; fetch</button>
-          <span style="font-family:var(--mono); font-size:11px; color:var(--muted);">or</span>
-          <label class="btn btn-xs btn-ghost" style="margin:0;">&#128229; Upload Stremio export JSON<input type="file" accept="application/json,.json" class="hidden" onchange="migrateUpload(event)" style="display:none;" /></label>
-        </div>
-      </div>
-    </div>
-    ${dataBlock}
-    ${runBlock}`;
+  const user = migrateState.stremioUser || {};
+  const userLabel = user.email || user._id || user.id || (connected ? 'connected account' : '');
+  const diff = data ? stremioCompare() : null;
+  const connectionHtml = connected
+    ? [
+        '<div class="pmgr-card is-active" style="margin-bottom:12px;">',
+          '<div class="pmgr-swatch" style="background:var(--green);"></div>',
+          '<div class="pmgr-info"><div class="pmgr-name">' + esc(userLabel) + '</div><div class="pmgr-meta">Stremio connected' + (migrateState.persist ? ' · remembered on this device' : ' · session only') + '</div></div>',
+          '<div class="pmgr-actions"><button class="btn btn-xs btn-amber" onclick="switchPane(\'stremioaddons\')">Manage add-ons</button><button class="btn btn-xs" onclick="refreshStremioUi()">↻ Refresh</button><button class="btn btn-xs btn-red-ghost" onclick="disconnectStremio()">Disconnect</button></div>',
+        '</div>',
+        '<label class="hint" style="display:flex;gap:8px;align-items:center;"><input type="checkbox" style="width:auto;" ' + (migrateState.persist ? 'checked' : '') + ' onchange="setStremioRemember(this.checked)" /> Remember the Stremio auth key on this device</label>'
+      ].join('')
+    : [
+        '<div class="fg"><label>Stremio auth key</label><input id="migrateAuthKey" type="password" placeholder="Paste your Stremio auth key" autocomplete="off" /></div>',
+        '<p class="hint">Recommended: paste an auth key. You can also sign in once with email and password; the password is never stored.</p>',
+        '<div class="grid2" style="margin-top:8px;">',
+          '<div class="fg" style="margin:0;"><label>Email</label><input id="migrateEmail" type="email" placeholder="your@stremio.email" autocomplete="username" /></div>',
+          '<div class="fg" style="margin:0;"><label>Password</label><input id="migratePass" type="password" placeholder="Stremio password" autocomplete="current-password" /></div>',
+        '</div>',
+        '<label class="hint" style="display:flex;gap:8px;align-items:center;margin-top:12px;"><input id="migrateRemember" type="checkbox" style="width:auto;" /> Remember the auth key on this device</label>',
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;">',
+          '<button class="btn btn-amber" onclick="migrateConnect()">Connect &amp; compare</button>',
+          '<span style="font-family:var(--mono);font-size:11px;color:var(--muted);">or</span>',
+          '<label class="btn btn-xs btn-ghost" style="margin:0;">&#128229; Open export file<input type="file" accept="application/json,.json" class="hidden" onchange="migrateUpload(event)" style="display:none;" /></label>',
+        '</div>'
+      ].join('');
+  let comparisonHtml = '';
+  if (data && !session) {
+    comparisonHtml = [
+      '<div class="settings-block">',
+        '<div class="settings-block-head"><h3>Stremio account</h3><span class="platform-chip">Stremio-only mode</span></div>',
+        '<div style="padding:0 16px 14px;">',
+          '<div class="avatar-grid">',
+            '<div class="avatar-card"><div class="avatar-label">Community add-ons</div><div class="format-preview-name">' + data.addons.length + '</div><div class="format-preview-desc">installed in Stremio; official/protected add-ons are kept separately</div></div>',
+            '<div class="avatar-card"><div class="avatar-label">Library</div><div class="format-preview-name">' + data.library.length + '</div><div class="format-preview-desc">saved Stremio titles</div></div>',
+          '</div>',
+          '<div class="alert alert-ok" style="margin-top:12px;">Stremio is ready. Use the Marketplace to install add-ons directly. Sign in to Nuvio when you want comparison or two-way merging.</div>',
+          '<div class="tool-actions"><button class="btn btn-amber" onclick="switchPane(\'market\')">Open Marketplace</button><button class="btn btn-xs btn-ghost" onclick="switchPane(\'home\')">Sign in to Nuvio</button></div>',
+        '</div>',
+      '</div>'
+    ].join('');
+  } else if (data && diff) {
+    const outboundDisabled = migrateState.fileMode ? ' disabled title="A live Stremio connection is required"' : '';
+    comparisonHtml = [
+      '<div class="settings-block">',
+        '<div class="settings-block-head"><h3>Provider comparison</h3><span class="platform-chip">' + (migrateState.fileMode ? 'export file' : 'live') + '</span></div>',
+        '<div style="padding:0 16px 14px;">',
+          '<div class="avatar-grid">',
+            '<div class="avatar-card"><div class="avatar-label">Add-ons</div><div class="format-preview-name">' + diff.nuvioAddons + ' / ' + diff.stremioAddons + '</div><div class="format-preview-desc">Nuvio / Stremio<br>' + diff.addonsOnlyNuvio + ' only in Nuvio · ' + diff.addonsOnlyStremio + ' only in Stremio · ' + diff.addonsBoth + ' shared</div></div>',
+            '<div class="avatar-card"><div class="avatar-label">Library</div><div class="format-preview-name">' + diff.nuvioLibrary + ' / ' + diff.stremioLibrary + '</div><div class="format-preview-desc">Nuvio / Stremio<br>' + diff.libraryOnlyNuvio + ' only in Nuvio · ' + diff.libraryOnlyStremio + ' only in Stremio · ' + diff.libraryBoth + ' shared</div></div>',
+          '</div>',
+          '<p class="hint" style="margin-top:12px;">Stremio → Nuvio stages add-ons and library for the normal Nuvio push, while watch progress/history merge immediately. Nuvio → Stremio adds or updates without removing existing Stremio items.</p>',
+        '</div>',
+      '</div>',
+      '<div class="settings-block">',
+        '<div class="settings-block-head"><h3>Sync actions</h3><span class="platform-chip">merge-first</span></div>',
+        '<div style="padding:0 16px 14px;">',
+          '<div class="tool-actions" style="margin-top:0;">',
+            '<button class="btn btn-amber" onclick="runStremioSync(\'to-nuvio\')">Stremio → Nuvio</button>',
+            '<button class="btn" onclick="runStremioSync(\'to-stremio\')"' + outboundDisabled + '>Nuvio → Stremio</button>',
+            '<button class="btn btn-green" onclick="runStremioSync(\'both\')"' + outboundDisabled + '>Merge both</button>',
+          '</div>',
+          '<details style="margin-top:14px;"><summary class="hint" style="cursor:pointer;">Advanced · mirror enabled Nuvio add-ons to Stremio</summary>',
+            '<div class="alert alert-warn" style="margin-top:10px;">Mirror mode removes Stremio-only community add-ons. Official and protected add-ons are always retained, and a local backup is saved first.</div>',
+            '<button class="btn btn-xs btn-red-ghost" onclick="runStremioSync(\'mirror\')"' + outboundDisabled + '>Mirror Stremio add-ons</button>',
+          '</details>',
+        '</div>',
+      '</div>'
+    ].join('');
+  }
+  host.innerHTML = [
+    '<div class="settings-block">',
+      '<div class="settings-block-head"><h3>Connect Stremio</h3><span class="platform-chip">' + (connected ? 'connected' : (migrateState.fileMode ? 'file loaded' : 'not connected')) + '</span></div>',
+      '<div style="padding:0 16px 14px;">' + connectionHtml + '</div>',
+    '</div>',
+    comparisonHtml,
+    '<div id="migrateMsg"></div>'
+  ].join('');
 }
 async function migrateConnect(){
-  const msg = $('migrateMsg');
   const key = ($('migrateAuthKey') && $('migrateAuthKey').value.trim()) || '';
   const email = ($('migrateEmail') && $('migrateEmail').value.trim()) || '';
   const pass = ($('migratePass') && $('migratePass').value) || '';
-  if (msg) msg.innerHTML = '<div class="alert alert-ok">Connecting to Stremio…</div>';
+  const remember = !!($('migrateRemember') && $('migrateRemember').checked);
+  setStremioMessage('Connecting to Stremio…');
   try {
     let authKey = key;
+    let user = null;
     if (!authKey) {
-      if (!email || !pass) throw new Error('Paste an auth key, or enter email + password');
-      const res = await stremioLogin(email, pass);
-      authKey = res.authKey;
-      migrateState.stremioUser = res.user || { email };
+      if (!email || !pass) throw new Error('Paste an auth key, or enter email and password');
+      const result = await stremioLogin(email, pass);
+      authKey = result.authKey;
+      user = result.user || { email };
     }
+    if (!user) user = await stremioGetUser(authKey);
     migrateState.authKey = authKey;
-    if ($('migrateAuthKey')) $('migrateAuthKey').value = authKey;
-    if (msg) msg.innerHTML = '<div class="alert alert-ok">Fetching your Stremio data…</div>';
-    const raw = await stremioFetch(authKey);
-    migrateState.data = migrateMapData(raw);
-    if (msg) msg.innerHTML = '<div class="alert alert-ok">Loaded ' + migrateState.data.addons.length + ' add-ons and ' + migrateState.data.library.length + ' library items from Stremio.</div>';
+    migrateState.stremioUser = user || (email ? { email } : null);
+    migrateState.persist = remember;
+    migrateState.fileMode = false;
+    persistStremioConnection();
+    await refreshStremioData();
     renderMigrate();
+    setStremioMessage('Connected. Provider comparison is ready.');
   } catch (e) {
-    if (msg) msg.innerHTML = '<div class="alert alert-err">' + esc(e.message || String(e)) + '</div>';
+    setStremioMessage(e.message || String(e), true);
+  } finally {
+    const passEl = $('migratePass'); if (passEl) passEl.value = '';
   }
+}
+async function refreshStremioUi(){
+  setStremioMessage('Refreshing Stremio…');
+  try {
+    await refreshStremioData();
+    renderMigrate();
+    setStremioMessage('Stremio data refreshed.');
+  } catch (e) { setStremioMessage(e.message || String(e), true); }
+}
+async function disconnectStremio(){
+  const staged = stremioAddonManager.dirty ? '\n\nYour staged Stremio add-on changes will be discarded.' : '';
+  if (!await confirmDialog('Disconnect Stremio from this companion? This only removes the local auth key; it does not change the Stremio account.' + staged, { title: 'Disconnect Stremio', okLabel: 'Disconnect', danger: true })) return;
+  migrateState = { authKey: null, stremioUser: null, persist: false, loading: false, fileMode: false, raw: { addons: [], library: [] }, data: null, error: null, done: { addons: 0, library: 0, progress: 0, history: 0 } };
+  resetStremioAddonManagerState();
+  store.del(STREMIO_CONNECTION_KEY);
+  renderMigrate();
+  renderStremioAddonManager();
+  toast('Stremio disconnected');
 }
 async function migrateUpload(ev){
   const file = ev && ev.target && ev.target.files ? ev.target.files[0] : null;
   if (!file) return;
-  const msg = $('migrateMsg');
   try {
-    const text = await file.text();
-    const raw = parseStremioExportFile(text);
+    const raw = parseStremioExportFile(await file.text());
+    migrateState.raw = raw;
     migrateState.data = migrateMapData(raw);
+    migrateState.fileMode = true;
     migrateState.authKey = '(file)';
-    if (msg) msg.innerHTML = '<div class="alert alert-ok">Loaded ' + migrateState.data.addons.length + ' add-ons and ' + migrateState.data.library.length + ' library items from file.</div>';
+    migrateState.persist = false;
+    migrateState.stremioUser = { email: file.name };
+    resetStremioAddonManagerState();
+    store.del(STREMIO_CONNECTION_KEY);
     renderMigrate();
+    setStremioMessage('Stremio export loaded. It can be merged into Nuvio; outbound Stremio actions require a live connection.');
   } catch (e) {
-    if (msg) msg.innerHTML = '<div class="alert alert-err">Could not parse Stremio export: ' + esc(e.message || String(e)) + '</div>';
+    setStremioMessage('Could not parse Stremio export: ' + (e.message || String(e)), true);
   } finally { ev.target.value = ''; }
 }
-async function runMigration(){
-  const data = migrateState.data; if (!data) return;
-  const want = {};
-  document.querySelectorAll('[data-mig]').forEach(el => { want[el.dataset.mig] = el.checked; });
-  const msg = $('migrateMsg');
-  const done = { addons: 0, library: 0, progress: 0, history: 0 };
+async function runStremioSync(direction){
+  setStremioMessage('Preparing sync…');
   try {
-    if (want.addons && data.addons.length) {
-      for (const a of data.addons) {
-        let exists = false;
-        try { exists = R.addon.items.some(x => normalizeUrl(x.url) === normalizeUrl(a.url)); } catch {}
-        if (!exists) R.addon.items.push(a);
-      }
-      done.addons = data.addons.length;
-      renderRack('addon'); refreshManifests('addon'); checkDirty('addon');
-    }
-    if (want.library && data.library.length) {
-      store.set('pb_backup_library_p' + currentProfile, JSON.stringify({ at: new Date().toISOString(), prev: JSON.parse(libraryState.snapshot || '[]') }));
-      await rpcResourcePush('sync_push_library', currentProfile, data.library);
-      libraryState.items = JSON.parse(JSON.stringify(data.library));
-      snapshotLibrary();
-      done.library = data.library.length;
-    }
-    if (want.progress && data.progress.length) {
-      await rpcResourcePush('sync_push_watch_progress', currentProfile, data.progress);
-      done.progress = data.progress.length;
-    }
-    if (want.history && data.history.length) {
-      await rpcResourcePush('sync_push_watched_items', currentProfile, data.history);
-      done.history = data.history.length;
-    }
-    migrateState.done = done;
-    const bits = [];
-    if (done.addons) bits.push(done.addons + ' add-ons staged (push from Add-ons)');
-    if (done.library) bits.push(done.library + ' library items pushed');
-    if (done.progress) bits.push(done.progress + ' progress entries merged');
-    if (done.history) bits.push(done.history + ' history entries merged');
-    if (msg) msg.innerHTML = '<div class="alert alert-ok">Migration done: ' + esc(bits.join(' · ') || 'nothing selected') + '.</div>';
-    toast('Migration complete');
+    let result;
+    if (direction === 'to-nuvio') result = await stageStremioIntoNuvio();
+    else if (direction === 'to-stremio') result = await pushNuvioIntoStremio();
+    else if (direction === 'both') result = await mergeBothProviders();
+    else if (direction === 'mirror') result = await mirrorStremioAddonsFromNuvio();
+    if (!result) { setStremioMessage('No changes were made.'); return; }
+    renderMigrate();
+    if (direction === 'to-nuvio') setStremioMessage('Stremio merged into Nuvio. Review the staged add-on/library changes, then use Push to Nuvio. Watch activity has already been merged.');
+    else if (direction === 'to-stremio') setStremioMessage('Nuvio add-ons and library were merged into Stremio.');
+    else if (direction === 'both') setStremioMessage('Two-way merge complete. Stremio is updated; review and push the staged Nuvio changes.');
+    else setStremioMessage('Stremio add-ons mirrored safely. A pre-mirror backup is stored on this device.');
   } catch (e) {
-    if (msg) msg.innerHTML = '<div class="alert alert-err">Migration partial/failed: ' + esc(e.message || String(e)) + '</div>';
+    setStremioMessage('Sync failed: ' + (e.message || String(e)), true);
   }
+}
+async function runMigration(){ return runStremioSync('to-nuvio'); }
+
+/* ════════════════════ STREMIO ADD-ON MANAGER ════════════════════ */
+function resetStremioAddonManagerState(){
+  stremioAddonManager = { items: [], snapshotItems: [], remoteFingerprint: null, dirty: false, loading: false, filter: '', selecting: false, selected: new Set() };
+  const dot = $('dotStremioAddons'); if (dot) dot.classList.add('hidden');
+}
+function stremioAddonBackupKey(){
+  return 'pb_backup_stremio_addons_' + hashText((migrateState.stremioUser && (migrateState.stremioUser.email || migrateState.stremioUser._id)) || 'account');
+}
+function stremioAddonManagerKey(item){
+  try { return stremioDescriptorUrl(item); } catch { return String(item && (item.transportUrl || item.url) || '').toLowerCase(); }
+}
+function stremioAddonFingerprint(items){
+  const compact = (items || []).map(item => ({
+    url: stremioAddonManagerKey(item),
+    id: item && item.manifest && item.manifest.id || '',
+    version: item && item.manifest && item.manifest.version || '',
+    official: !!(item && (item.official || (item.flags && item.flags.official))),
+    protected: !!(item && (item.protected || (item.flags && item.flags.protected)))
+  }));
+  return hashText(JSON.stringify(compact));
+}
+function stremioAddonManagerDiff(){
+  const before = stremioAddonManager.snapshotItems || [];
+  const after = stremioAddonManager.items || [];
+  const beforeMap = new Map(before.map(item => [stremioAddonManagerKey(item), item]));
+  const afterMap = new Map(after.map(item => [stremioAddonManagerKey(item), item]));
+  const added = after.filter(item => !beforeMap.has(stremioAddonManagerKey(item)));
+  const removed = before.filter(item => !afterMap.has(stremioAddonManagerKey(item)));
+  const beforeOrder = before.map(stremioAddonManagerKey).filter(key => afterMap.has(key));
+  const afterOrder = after.map(stremioAddonManagerKey).filter(key => beforeMap.has(key));
+  const moved = after.filter(item => {
+    const key = stremioAddonManagerKey(item);
+    return beforeMap.has(key) && beforeOrder.indexOf(key) !== afterOrder.indexOf(key);
+  });
+  return { added, removed, moved };
+}
+function adoptStremioAddonRemote(force = false){
+  if (stremioAddonManager.dirty && !force) return false;
+  const items = JSON.parse(JSON.stringify((migrateState.raw && migrateState.raw.addons) || []));
+  stremioAddonManager.items = items;
+  stremioAddonManager.snapshotItems = JSON.parse(JSON.stringify(items));
+  stremioAddonManager.remoteFingerprint = stremioAddonFingerprint(items);
+  stremioAddonManager.dirty = false;
+  stremioAddonManager.selecting = false;
+  stremioAddonManager.selected = new Set();
+  if (activePane === 'stremioaddons') renderStremioAddonManager();
+  return true;
+}
+function updateStremioAddonDirty(){
+  stremioAddonManager.dirty = stremioAddonFingerprint(stremioAddonManager.items) !== stremioAddonFingerprint(stremioAddonManager.snapshotItems);
+  const dot = $('dotStremioAddons'); if (dot) dot.classList.toggle('hidden', !stremioAddonManager.dirty);
+  renderStremioAddonManager();
+}
+async function loadStremioAddonManager(force = false){
+  if (!stremioIsConnected()) { renderStremioAddonManager(); return; }
+  if (stremioAddonManager.dirty && force && !await confirmDialog('Discard staged Stremio add-on changes and reload the account?', { title: 'Reload Stremio add-ons', okLabel: 'Discard & reload', danger: true })) return;
+  if (stremioAddonManager.loading) return;
+  stremioAddonManager.loading = true;
+  renderStremioAddonManager();
+  try {
+    await refreshStremioData();
+    adoptStremioAddonRemote(true);
+    const status = $('stremioAddonStatus');
+    if (status) status.innerHTML = '<div class="alert alert-ok">' + stremioAddonManager.items.length + ' installed Stremio add-ons loaded.</div>';
+  } catch (e) {
+    const status = $('stremioAddonStatus');
+    if (status) status.innerHTML = '<div class="alert alert-err">Could not load Stremio add-ons: ' + esc(e.message || String(e)) + '</div>';
+  } finally {
+    stremioAddonManager.loading = false;
+    renderStremioAddonManager();
+  }
+}
+function stremioAddonLocked(item){ return isOfficialStremioAddon(item); }
+function stremioAddonManagerName(item){
+  return item && item.manifest && item.manifest.name || item && item.name || shortHost(stremioAddonUrl(item));
+}
+function setStremioAddonFilter(value){ stremioAddonManager.filter = String(value || '').trim().toLowerCase(); renderStremioAddonManager(); }
+function renderStremioAddonManager(){
+  const list = $('stremioAddonList'); if (!list) return;
+  const count = $('stremioAddonCount');
+  const status = $('stremioAddonStatus');
+  const saveBlock = $('stremioAddonSaveBlock');
+  if (!stremioIsConnected()) {
+    if (count) count.textContent = '';
+    if (status) status.innerHTML = '<div class="alert alert-warn">Connect your Stremio account first. <button class="btn btn-xs" style="margin-left:8px;" onclick="switchPane(\'migrate\')">Connect Stremio</button></div>';
+    list.innerHTML = '<div class="empty">No Stremio account connected.</div>';
+    if (saveBlock) saveBlock.classList.add('hidden');
+    return;
+  }
+  if (saveBlock) saveBlock.classList.remove('hidden');
+  if (stremioAddonManager.loading) {
+    list.innerHTML = '<div class="empty">Loading Stremio add-ons…</div>';
+    if (count) count.textContent = '';
+    return;
+  }
+  const items = stremioAddonManager.items || [];
+  const filter = stremioAddonManager.filter || '';
+  const visible = items.map((item, index) => ({ item, index })).filter(row => {
+    const m = row.item.manifest || {};
+    const hay = [m.name, m.id, m.description, stremioAddonUrl(row.item), ...(m.resources || []).map(r => typeof r === 'string' ? r : r.name)].filter(Boolean).join(' ').toLowerCase();
+    return !filter || filter.split(/\s+/).every(token => hay.includes(token));
+  });
+  if (count) count.textContent = (filter ? visible.length + ' of ' : '') + items.length + ' installed';
+  if (!items.length) list.innerHTML = '<div class="empty">No add-ons returned by Stremio.</div>';
+  else if (!visible.length) list.innerHTML = '<div class="empty">No Stremio add-ons match this filter.</div>';
+  else list.innerHTML = visible.map(row => {
+    const item = row.item, i = row.index, m = item.manifest || {};
+    const locked = stremioAddonLocked(item);
+    const url = stremioAddonUrl(item);
+    const logo = m.logo || m.icon || '';
+    const resources = (m.resources || []).map(r => typeof r === 'string' ? r : r.name).filter(Boolean).slice(0, 5);
+    const selected = stremioAddonManager.selected && stremioAddonManager.selected.has(i);
+    const select = stremioAddonManager.selecting && !locked ? '<input type="checkbox" style="width:auto;" aria-label="Select ' + esc(stremioAddonManagerName(item)) + '" ' + (selected ? 'checked' : '') + ' onchange="toggleStremioAddonSelected(' + i + ',this.checked)" />' : '';
+    const logoHtml = logo ? '<img src="' + esc(logo) + '" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:42px;height:42px;border-radius:9px;object-fit:cover;background:var(--surface3);" />' : '<div class="pmgr-swatch" style="background:var(--surface3);display:grid;place-items:center;color:var(--muted);font-weight:800;">' + esc((m.name || '?').slice(0,1).toUpperCase()) + '</div>';
+    const configure = m.behaviorHints && (m.behaviorHints.configurable || m.behaviorHints.configurationRequired)
+      ? '<a class="btn btn-xs btn-ghost" href="' + esc(configureUrlFor(url)) + '" target="_blank" rel="noopener">Configure</a>' : '';
+    return [
+      '<div class="pmgr-card ' + (locked ? 'is-active' : '') + '">',
+        select,
+        '<span class="platform-chip" title="Stremio priority order">' + (i + 1) + '</span>',
+        logoHtml,
+        '<div class="pmgr-info">',
+          '<div class="pmgr-name">' + esc(m.name || stremioAddonManagerName(item)) + ' ' + (locked ? '<span class="platform-chip">protected</span>' : '') + '</div>',
+          '<div class="pmgr-meta">' + esc(m.id || shortHost(url)) + (m.version ? ' · v' + esc(m.version) : '') + '</div>',
+          '<div class="pmgr-meta" style="word-break:break-all;">' + esc(url) + '</div>',
+          (resources.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">' + resources.map(r => '<span class="chip c-stream">' + esc(r) + '</span>').join('') + '</div>' : ''),
+        '</div>',
+        '<div class="pmgr-actions">',
+          '<button class="btn btn-xs btn-ghost" onclick="moveStremioAddon(' + i + ',-1)" ' + (i === 0 ? 'disabled' : '') + ' aria-label="Move up">↑</button>',
+          '<button class="btn btn-xs btn-ghost" onclick="moveStremioAddon(' + i + ',1)" ' + (i === items.length - 1 ? 'disabled' : '') + ' aria-label="Move down">↓</button>',
+          configure,
+          '<a class="btn btn-xs btn-ghost" href="' + esc(stremioWebOf(url)) + '" target="_blank" rel="noopener">Open</a>',
+          '<button class="btn btn-xs btn-red-ghost" onclick="removeStremioAddon(' + i + ')" ' + (locked ? 'disabled title="Official/protected add-ons cannot be removed"' : '') + '>Remove</button>',
+        '</div>',
+      '</div>'
+    ].join('');
+  }).join('');
+  const diff = stremioAddonManagerDiff();
+  const summary = diff.added.length + ' added · ' + diff.removed.length + ' removed · ' + diff.moved.length + ' reordered';
+  const chip = $('stremioAddonDirtyChip'); if (chip) { chip.textContent = stremioAddonManager.dirty ? 'staged' : 'saved'; chip.style.color = stremioAddonManager.dirty ? 'var(--amber)' : ''; }
+  const summaryEl = $('stremioAddonDiffSummary'); if (summaryEl) summaryEl.textContent = stremioAddonManager.dirty ? summary : 'No staged changes.';
+  const save = $('saveStremioAddonsBtn'); if (save) save.disabled = !stremioAddonManager.dirty;
+  const bulk = $('stremioAddonBulkBar'); if (bulk) bulk.classList.toggle('hidden', !stremioAddonManager.selecting);
+  const bulkCount = $('stremioAddonBulkCount'); if (bulkCount) bulkCount.textContent = (stremioAddonManager.selected ? stremioAddonManager.selected.size : 0) + ' selected';
+  const search = $('stremioAddonSearch'); if (search && search.value !== stremioAddonManager.filter) search.value = stremioAddonManager.filter;
+}
+function moveStremioAddon(index, direction){
+  const target = index + direction;
+  if (target < 0 || target >= stremioAddonManager.items.length) return;
+  [stremioAddonManager.items[index], stremioAddonManager.items[target]] = [stremioAddonManager.items[target], stremioAddonManager.items[index]];
+  stremioAddonManager.selected = new Set();
+  updateStremioAddonDirty();
+}
+function removeStremioAddon(index){
+  const item = stremioAddonManager.items[index]; if (!item) return;
+  if (stremioAddonLocked(item)) { toast('Official/protected Stremio add-ons cannot be removed'); return; }
+  stremioAddonManager.items.splice(index, 1);
+  stremioAddonManager.selected = new Set();
+  updateStremioAddonDirty();
+  toast('Removal staged — review and save to Stremio');
+}
+function toggleStremioAddonSelect(){
+  stremioAddonManager.selecting = !stremioAddonManager.selecting;
+  if (!stremioAddonManager.selecting) stremioAddonManager.selected = new Set();
+  renderStremioAddonManager();
+}
+function toggleStremioAddonSelected(index, on){
+  if (!stremioAddonManager.selected) stremioAddonManager.selected = new Set();
+  if (on) stremioAddonManager.selected.add(index); else stremioAddonManager.selected.delete(index);
+  renderStremioAddonManager();
+}
+async function bulkRemoveStremioAddons(){
+  const indexes = [...(stremioAddonManager.selected || [])].filter(i => stremioAddonManager.items[i] && !stremioAddonLocked(stremioAddonManager.items[i]));
+  if (!indexes.length) { toast('Select removable community add-ons first'); return; }
+  if (!await confirmDialog('Stage removal of ' + indexes.length + ' selected Stremio add-on' + (indexes.length === 1 ? '' : 's') + '?', { title: 'Remove selected add-ons', okLabel: 'Stage removal', danger: true })) return;
+  indexes.sort((a,b) => b-a).forEach(i => stremioAddonManager.items.splice(i,1));
+  stremioAddonManager.selected = new Set();
+  stremioAddonManager.selecting = false;
+  updateStremioAddonDirty();
+}
+async function addStremioAddonPrompt(){
+  if (!stremioIsConnected()) { switchPane('migrate'); toast('Connect Stremio first'); return; }
+  if (stremioAddonManager.loading || stremioAddonManager.remoteFingerprint === null) { toast('Wait for the installed Stremio add-ons to finish loading'); return; }
+  const input = await promptDialog('Paste a Stremio add-on manifest URL:', { title: 'Add Stremio add-on', okLabel: 'Stage add-on', placeholder: 'https://example.com/manifest.json' });
+  if (input == null) return;
+  let url;
+  try { url = normalizeHttpUrl(input, { manifest: true }); } catch (e) { toast(e.message || 'Invalid manifest URL'); return; }
+  if (stremioAddonManager.items.some(item => stremioAddonManagerKey(item) === normalizeUrl(url))) { toast('That add-on is already installed'); return; }
+  const status = $('stremioAddonStatus'); if (status) status.innerHTML = '<div class="alert alert-ok">Loading manifest…</div>';
+  try {
+    const descriptor = await stremioFetchManifestDescriptor({ url });
+    stremioAddonManager.items.push(descriptor);
+    updateStremioAddonDirty();
+    if (status) status.innerHTML = '<div class="alert alert-ok">“' + esc(descriptor.manifest.name) + '” staged. Review and save to Stremio.</div>';
+  } catch (e) {
+    if (status) status.innerHTML = '<div class="alert alert-err">' + esc(e.message || String(e)) + '</div>';
+  }
+}
+function stremioAddonChangeNames(items){ return (items || []).slice(0,20).map(stremioAddonManagerName); }
+async function previewStremioAddonChanges(){
+  const diff = stremioAddonManagerDiff();
+  const lines = [
+    'Added (' + diff.added.length + '): ' + (stremioAddonChangeNames(diff.added).join(', ') || 'none'),
+    'Removed (' + diff.removed.length + '): ' + (stremioAddonChangeNames(diff.removed).join(', ') || 'none'),
+    'Reordered: ' + diff.moved.length + ' add-ons',
+    '',
+    'Final collection: ' + stremioAddonManager.items.length + ' add-ons.'
+  ];
+  await alertDialog(lines.join('\n'), { title: 'Stremio add-on changes' });
+}
+async function discardStremioAddonChanges(){
+  if (!stremioAddonManager.dirty) { toast('No staged Stremio changes'); return; }
+  if (!await confirmDialog('Discard all staged Stremio add-on changes?', { title: 'Discard changes', okLabel: 'Discard', danger: true })) return;
+  stremioAddonManager.items = JSON.parse(JSON.stringify(stremioAddonManager.snapshotItems || []));
+  stremioAddonManager.selected = new Set();
+  stremioAddonManager.selecting = false;
+  updateStremioAddonDirty();
+}
+async function saveStremioAddonChanges(){
+  if (!stremioAddonManager.dirty) { toast('No Stremio add-on changes to save'); return; }
+  const diff = stremioAddonManagerDiff();
+  if (!await confirmDialog('Save Stremio add-on changes?\n\n' + diff.added.length + ' added · ' + diff.removed.length + ' removed · ' + diff.moved.length + ' reordered.\n\nOfficial/protected add-ons remain installed. A local backup is saved first.', { title: 'Save to Stremio', okLabel: 'Save changes', danger: diff.removed.length > 0 })) return;
+  const status = $('stremioAddonStatus'); if (status) status.innerHTML = '<div class="alert alert-ok">Checking Stremio for newer changes…</div>';
+  try {
+    const latest = await stremioFetch(migrateState.authKey);
+    if (stremioAddonFingerprint(latest.addons) !== stremioAddonManager.remoteFingerprint) throw new Error('Stremio changed on another device after this list was loaded. Reload, review, and apply your changes again.');
+    const latestLocked = new Map((latest.addons || []).filter(stremioAddonLocked).map(item => [stremioAddonManagerKey(item), item]));
+    const stagedKeys = new Set(stremioAddonManager.items.map(stremioAddonManagerKey));
+    const missingProtected = [...latestLocked.keys()].filter(key => !stagedKeys.has(key));
+    if (missingProtected.length) throw new Error('A protected Stremio add-on is missing from the staged list. Reload before saving.');
+    const staged = stremioAddonManager.items.map(item => latestLocked.get(stremioAddonManagerKey(item)) || item);
+    migrateState.raw = latest;
+    migrateState.data = migrateMapData(latest);
+    await stremioSetAddonCollection(staged, 'before add-on manager save');
+    await refreshStremioData();
+    adoptStremioAddonRemote(true);
+    if (status) status.innerHTML = '<div class="alert alert-ok">Stremio add-ons saved successfully.</div>';
+    toast('Stremio add-ons saved');
+  } catch (e) {
+    if (status) status.innerHTML = '<div class="alert alert-err">Save stopped: ' + esc(e.message || String(e)) + '</div>';
+  }
+}
+async function restoreStremioAddonBackup(){
+  if (!stremioIsConnected()) { toast('Connect Stremio first'); return; }
+  if (stremioAddonManager.loading || stremioAddonManager.remoteFingerprint === null) { toast('Wait for the installed Stremio add-ons to finish loading'); return; }
+  let backup;
+  try { backup = JSON.parse(store.get(stremioAddonBackupKey()) || 'null'); } catch {}
+  if (!backup || !Array.isArray(backup.addons)) { toast('No Stremio add-on backup found on this device'); return; }
+  if (!await confirmDialog('Stage the Stremio add-on backup from ' + new Date(backup.at).toLocaleString() + '?\n\nNothing is written until you review and save.', { title: 'Restore Stremio backup', okLabel: 'Stage backup' })) return;
+  stremioAddonManager.items = JSON.parse(JSON.stringify(backup.addons));
+  stremioAddonManager.selected = new Set();
+  stremioAddonManager.selecting = false;
+  updateStremioAddonDirty();
+  toast('Backup staged — review before saving');
 }
 
 /* ════════════════════ ACCOUNTS pane ════════════════════ */
@@ -7934,10 +8648,11 @@ async function saveProfileFormats(){
 let paletteState = { all: [], items: [], active: 0 };
 function buildPaletteCommands(){
   const cmds = [];
-  const panes = [['home','Home'],['addons','My Add-ons'],['market','Marketplace'],['plugins','Plugins'],['catalogues','Catalogues'],['collections','My Collections'],['discover','Pre-built Collections'],['community','Community Collections'],['library','My Library'],['activity','Watch Activity'],['profilemgr','Manage Profiles'],['profilecustom','Profile Customisation'],['profileclone','Profile Clone'],['kidsprofile','Create Kids Profile'],['toolkit','Toolkit'],['accounts','Accounts'],['migrate','Migrate from Stremio'],['settings','Settings']];
+  const panes = [['home','Home'],['addons','My Add-ons'],['stremioaddons','Stremio Add-ons'],['market','Marketplace'],['plugins','Plugins'],['catalogues','Catalogues'],['collections','My Collections'],['discover','Pre-built Collections'],['community','Community Collections'],['library','My Library'],['activity','Watch Activity'],['profilemgr','Manage Profiles'],['profilecustom','Profile Customisation'],['profileclone','Profile Clone'],['kidsprofile','Create Kids Profile'],['toolkit','Toolkit'],['accounts','Accounts'],['migrate','Stremio Sync'],['settings','Settings']];
   panes.forEach(([id,label]) => cmds.push({ kind: 'Page', label, run: () => switchPane(id) }));
   const actions = [
     ['Add addon', () => { switchPane('addons'); addAddonPrompt(); }],
+    ['Add Stremio addon', () => { switchPane('stremioaddons'); addStremioAddonPrompt(); }],
     ['Add plugin', () => { switchPane('plugins'); addPluginPrompt(); }],
     ['Import addons from Stremio', () => { switchPane('addons'); importStremioPrompt(); }],
     ['Push to Nuvio', () => pushAll()],
@@ -8052,13 +8767,15 @@ window.addEventListener('resize', () => {
   setKeyboardOpenState(document.activeElement);
   renderProfilePicker();
 });
-window.addEventListener('beforeunload', e => { if (R.addon.dirty || R.plugin.dirty || collectionsState.dirty || libraryState.dirty || profileFormatDirty) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (R.addon.dirty || R.plugin.dirty || collectionsState.dirty || libraryState.dirty || profileFormatDirty || stremioAddonManager.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 /* boot */
 (async function(){
   applyResponsiveTitle();
   loadAccounts();
+  loadStremioConnection();
   renderBackendFields();
+  if ($('marketInstallTarget')) $('marketInstallTarget').value = store.get('pb_market_install_target') || 'nuvio';
   updatePasskeyAvailability();
   // register the service worker (installable PWA + offline shell); only on http(s)
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
